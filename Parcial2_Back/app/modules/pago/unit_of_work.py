@@ -1,12 +1,10 @@
 from sqlmodel import Session
 from app.core.unit_of_work import UnitOfWork
-from app.modules.producto.repository import ProductoRepository
-from app.modules.categoria.repository import CategoriaRepository
-from app.modules.ingrediente.repository import IngredienteRepository
+from app.modules.pedido.repository import PedidoRepository
+from app.modules.pago.repository import PagoRepository
 
-class ProductoUnitOfWork(UnitOfWork):
+class PagoUnitOfWork(UnitOfWork):
     def __init__(self, session: Session) -> None:
         super().__init__(session)
-        self.producto = ProductoRepository(session)
-        self.categoria = CategoriaRepository(session)
-        self.ingrediente = IngredienteRepository(session)
+        self.pago = PagoRepository(session)
+        self.pedido = PedidoRepository(session)
