@@ -2,7 +2,7 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlmodel import Session
 from app.modules.pedido.models import Pedido, HistorialEstadoPedido, EstadoPedido, FormaPago, DetallePedido
-from app.modules.pedido.schemas import PedidoCreate, PedidoRead, PedidoUpdate, DetallePedidoCreate, DetallePedidoRead, HistorialEstadoPedidoCreate, HistorialEstadoPedidoRead
+from app.modules.pedido.schemas import PedidoCreate, PedidoRead, PedidoHistorialUpdate, DetallePedidoCreate, DetallePedidoRead, HistorialEstadoPedidoCreate, HistorialEstadoPedidoRead
 from datetime import datetime, timezone
 from app.modules.pedido.unit_of_work import PedidoUnitOfWork
 
@@ -126,7 +126,7 @@ class PedidoService:
 
             return [self._map_to_read(p) for p in pedidos]
         
-    def actualizar(self, pedido_id: int, data: PedidoUpdate, motivo_historial: Optional[str] = None) -> PedidoRead:
+    def actualizar(self, pedido_id: int, data: PedidoHistorialUpdate, motivo_historial: Optional[str] = None) -> PedidoRead:
         with PedidoUnitOfWork(self._session) as uow:
 
             pedido = self._get_or_404(uow, pedido_id)
