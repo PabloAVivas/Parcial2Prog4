@@ -1,0 +1,168 @@
+@baseUrl = http://localhost:8000
+@json = application/json
+
+
+### ==========================================
+### MÓDULO: CATEGORÍAS
+### ==========================================
+
+### Crear Categoria
+POST {{baseUrl}}/categorias/
+Content-Type: {{json}}
+
+{
+  "nombre": "HER-05",
+  "descripcion": "Herramientas Manuales",
+  "imagen_url": "http.prueba"
+}
+
+### Crear Categoria 2
+POST {{baseUrl}}/categorias/
+Content-Type: {{json}}
+
+{
+  "nombre": "HER-06",
+  "descripcion": "Herramientas Manuales",
+  "imagen_url": "http.prueba",
+  "parent_id": 1
+}
+
+### Listar Categorias
+GET {{baseUrl}}/categorias/
+
+### Listar Categorias query
+GET {{baseUrl}}/categorias/?offset=0&limit=10&nombre=HER
+
+### Detalle de Categoria exitoso
+GET {{baseUrl}}/categorias/2
+
+### Actualizar Categoria
+PATCH {{baseUrl}}/categorias/2
+Content-Type: {{json}}
+
+{
+  "nombre": "HER-07",
+  "descripcion": "Herramientas de Jardinería y Taller",
+  "imagen_url": "http.prueba",
+  "parent_id": 1
+}
+
+### Desactivar Categoria (Borrado logico)
+DELETE {{baseUrl}}/categorias/2
+
+
+### ==========================================
+### MÓDULO: INGREDIENTES
+### ==========================================
+
+### Crear ingrediente
+POST {{baseUrl}}/ingredientes/
+Content-Type: {{json}}
+
+{
+  "nombre": "carne",
+  "descripcion": "carne de vaca"
+}
+
+### Crear ingrediente 2
+POST {{baseUrl}}/ingredientes/
+Content-Type: {{json}}
+
+{
+  "nombre": "pan",
+  "descripcion": "pan de papa"
+}
+
+### Listar ingredientes
+GET {{baseUrl}}/ingredientes/
+
+### Listar ingredientes query
+GET {{baseUrl}}/ingredientes/?offset=0&limit=10&nombre=pan
+
+### Detalle de ingrediente exitoso
+GET {{baseUrl}}/ingredientes/1
+
+### Actualizar ingrediente
+PATCH {{baseUrl}}/ingredientes/2
+Content-Type: {{json}}
+
+{
+  "nombre": "pan con moras",
+  "descripcion": "pan de papa con moras",
+  "es_alergeno": true
+}
+
+### Desactivar ingrediente (Borrado logico)
+DELETE {{baseUrl}}/ingredientes/2
+
+### ==========================================
+### MÓDULO: PRODUCTOS
+### ==========================================
+
+### Crear Producto
+POST {{baseUrl}}/productos/
+Content-Type: {{json}}
+
+{
+  "nombre": "Silla Ergonómica 2",
+  "descripcion": "Silla de tipo ergonomica economica",
+  "precio_base": 250.00,
+  "imagenes_url":[
+  "https://imagen-ejemplo1.jpg",
+  "https://imagen-ejemplo2.jpg",
+  "https://imagen-ejemplo3.jpg"],
+  "stock_cantidad":3,
+  "disponible": true,
+  "categorias":[
+    {"id":1,
+      "es_principal":false
+    }
+  ],
+  "ingredientes":[
+    {"id":1,
+      "es_removible":true
+    }
+
+  ]
+}
+
+### Listar Productos
+GET {{baseUrl}}/productos/?offset=0&limit=5
+
+### Detalle Producto Exitoso
+GET {{baseUrl}}/productos/5
+
+### Actualizar Producto
+PATCH {{baseUrl}}/productos/2
+Content-Type: {{json}}
+
+{
+  "nombre": "Silla Ergonómica Premium",
+  "descripcion": "Silla de tipo ergonomica de mejor calidad",
+  "precio_base": 299.99,
+  "imagenes_url":[
+  "https://imagen-ejemplo6.jpg",
+  "https://imagen-ejemplo5.jpg",
+  "https://imagen-ejemplo4.jpg"],
+  "stock_cantidad":3,
+  "disponible": false,
+  "categorias":[
+    {"id":1,
+      "es_principal":false
+    }
+  ],
+  "ingredientes":[
+    {"id":1,
+      "es_removible":true
+    }
+
+  ]
+}
+
+
+### Desactivar Producto
+DELETE {{baseUrl}}/productos/5
+
+### Detalle Producto Inexistente
+GET {{baseUrl}}/productos/99
+

@@ -1,0 +1,6 @@
+fastapi[standard]
+uvicorn[standard]
+pydantic
+typing
+sqlmodel
+psycopg2
