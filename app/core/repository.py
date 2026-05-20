@@ -14,7 +14,7 @@ class BaseRepository(Generic[ModelT]):
 
     def get_all(self, offset: int = 0, limit: int = 100) -> Sequence[ModelT]:
         return self.session.exec(
-            select(self.model).offset(offset).limit(limit).order_by(ModelT.id)
+            select(self.model).offset(offset).limit(limit)
         ).all()
 
     def add(self, instance: ModelT) -> ModelT:

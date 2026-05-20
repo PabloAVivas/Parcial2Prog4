@@ -2,8 +2,7 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlmodel import Session
 from app.modules.pedido.models import Pedido, HistorialEstadoPedido, EstadoPedido, FormaPago, DetallePedido
-from app.modules.pedido.schemas import PedidoCreate, PedidoRead, PedidoHistorialUpdate, DetallePedidoCreate, DetallePedidoRead, HistorialEstadoPedidoCreate, HistorialEstadoPedidoRead
-from datetime import datetime, timezone
+from app.modules.pedido.schemas import PedidoCreate, PedidoRead, PedidoHistorialUpdate, DetallePedidoCreate, DetallePedidoRead, HistorialEstadoPedidoRead
 from app.modules.pedido.unit_of_work import PedidoUnitOfWork
 
 class PedidoService:
@@ -41,7 +40,7 @@ class PedidoService:
         detalles_pedido = [
             DetallePedidoRead(
                 pedido_id=link.pedido_id,
-                producto_id=link.product_id,
+                producto_id=link.producto_id,
                 cantidad=link.cantidad,
                 nombre_snapshot=link.nombre_snapshot,
                 precio_snapshot=link.precio_snapshot,
@@ -120,13 +119,18 @@ class PedidoService:
 
             return self._map_to_read(pedido)
     
-    def mostrar_todos(self, offset: Optional[int] = 0, limit: Optional[int] = 100) -> list[PedidoRead]:
+    def obtener_todos(self, offset: Optional[int] = 0, limit: Optional[int] = 100) -> list[PedidoRead]:
         with PedidoUnitOfWork(self._session) as uow:
             pedidos = uow.pedido.get_all(offset=offset, limit=limit)
 
             return [self._map_to_read(p) for p in pedidos]
         
-    def actualizar(self, pedido_id: int, data: PedidoHistorialUpdate, motivo_historial: Optional[str] = None) -> PedidoRead:
+    def obtener_por_id(self, pedido_id: int) -> PedidoRead:
+        with PedidoUnitOfWork(self._session) as uow:
+            pedido = self._get_or_404(uow, pedido_id)
+            return self._map_to_read(pedido)
+        
+    def actualizar(self, pedido_id: int, data: PedidoHistorialUpdate) -> PedidoRead:
         with PedidoUnitOfWork(self._session) as uow:
 
             pedido = self._get_or_404(uow, pedido_id)
@@ -136,11 +140,16 @@ class PedidoService:
                 pedido_id= pedido.id,
                 estado_desde= pedido.estado_codigo,
                 estado_hasta= data.estado_codigo,
-                motivo= motivo_historial
+                motivo= data.motivo
             )
             uow.pedido.add(historial)
 
-            patch = data.model_dump(exclude_unset=True)
+            patch = data.model_dump(exclude_unset=True, exclude={"motivo"})
 
             for field, value in patch.items():
                 setattr(pedido, field, value)
+
+            uow.pedido.add(pedido)
+            uow.flush()
+            uow.refresh(pedido)
+            return self._map_to_read(pedido)

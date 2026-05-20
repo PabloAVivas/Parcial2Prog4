@@ -166,3 +166,25 @@ DELETE {{baseUrl}}/productos/5
 ### Detalle Producto Inexistente
 GET {{baseUrl}}/productos/99
 
+### Pedido
+POST {{baseUrl}}/pedidos/
+Content-Type: {{json}}
+
+{
+  "forma_pago_codigo": "EFECTIVO",
+  "subtotal": 123,
+  "descuento": 1,
+  "costo_envio": 1,
+  "total": 123,
+  "notas": "string",
+  "detalle_pedidos": [
+     {
+      "producto_id": 1,
+      "cantidad": 2,
+      "personalizacion":[1]
+     }
+    ]
+}
+
+###
+GET {{baseUrl}}/pedidos

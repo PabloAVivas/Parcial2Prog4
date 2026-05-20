@@ -1,5 +1,5 @@
 from typing import Optional, TYPE_CHECKING, List
-from sqlalchemy import Column, ForeignKey, Integer, String, Boolean, event, BigInteger, SmallInteger
+from sqlalchemy import Column, ForeignKey, Integer, String, Boolean, event, SmallInteger, inspect
 from sqlmodel import Field, Relationship, SQLModel, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime, timezone
@@ -14,13 +14,11 @@ class FormaPago(SQLModel, table=True):
     __tablename__ = "forma_pago"
 
     codigo: str = Field(sa_column=Column(String(20), primary_key=True))
-    descripcion: str = Field(sa_column=Column(String(20), nullable=False))
+    descripcion: str = Field(sa_column=Column(String(80), nullable=False))
     habilitado: bool = Field(
         default=True,
         sa_column=Column(Boolean, nullable=False, default=True)
     )
-
-    pedidos: List["Pedido"] = Relationship(back_populates="forma_pago")
 
 
 
@@ -29,11 +27,9 @@ class EstadoPedido(SQLModel, table=True):
     __tablename__ = "estado_pedido"
 
     codigo: str = Field(sa_column=Column(String(20), primary_key=True))
-    descripcion: str = Field(sa_column=Column(String(20), nullable=False))
+    descripcion: str = Field(sa_column=Column(String(80), nullable=False))
     orden: int = Field(sa_column=Column(Integer, nullable=False))
     es_terminal: bool = Field(sa_column=Column(Boolean, nullable=False))
-
-    pedidos: List["Pedido"] = Relationship(back_populates="estado")
 
 
 
@@ -63,11 +59,11 @@ class DetallePedido(SQLModel, table=True):
     nombre_snapshot: str = Field(String(200), nullable=False)
     precio_snapshot: float = Field(ge=0, max_digits=10, decimal_places=2, nullable=False)
     subtotal_snap: float = Field(max_digits=10, decimal_places=2, nullable=False)
-    personalizacion: List[Integer]
+    personalizacion: list[int] = Field(default=[], sa_column=Column(JSONB))
 
     activo: bool = Field(nullable=False, default=True)
 
-    productos: Producto = Relationship()
+    productos: "Producto" = Relationship()
 
     created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)))
 
@@ -122,32 +118,32 @@ class HistorialEstadoPedido(SQLModel, table=True):
 
     __tablename__ = "historial_estado_pedido"
 
-    id:Optional[int] = Field(BigInteger, default=None, primary_key=True)
+    id:Optional[int] = Field(default=None, primary_key=True)
 
     pedido_id: int = Field(
         sa_column=Column(
             Integer,
             ForeignKey("pedido.id", ondelete="CASCADE"),
-            primary_key=True,
+            foreign_key=True,
             nullable=False
         )
     )
-    estado_desde: int = Field(
+    estado_desde: str = Field(
         sa_column=Column(
-            Integer,
+            String(20),
             ForeignKey("estado_pedido.codigo"),
-            primary_key=True,
+            foreign_key=True,
             nullable=False
         )
     )
-    estado_hasta: int = Field(
+    estado_hasta: str = Field(
         sa_column=Column(
-            Integer,
+            String(20),
             ForeignKey("estado_pedido.codigo"),
-            primary_key=True,
+            foreign_key=True,
             nullable=False
         )
     )
 
-    motivo: Optional[str] = Field(String, default= None)
+    motivo: Optional[str] = Field(default= None)
     created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)))
