@@ -22,6 +22,7 @@ class Usuario(SQLModel, table=True):
     email: str = Field(index=True, max_length=254, nullable=False, unique=True)
     celular: Optional[str] = Field(max_length=20, default=None)
     password_hash: str = Field(max_length=60, nullable=False)
+    activo: bool = Field(default=True, nullable=False)
     created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)))
     updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)))
     deleted_at: Optional[datetime] = Field(sa_column=Column(DateTime(timezone=True), nullable=True, default=None))
@@ -59,3 +60,9 @@ class DireccionEntrega(SQLModel, table=True):
     updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)))
     deleted_at: Optional[datetime] = Field(sa_column=Column(DateTime(timezone=True), nullable=True, default=None))
 
+class Rol(SQLModel,table=True):
+    __tablename__ = 'rol'
+
+    codigo: str = Field(primary_key=True, default='CLIENT')
+    nombre: str = Field(nullable=False, unique=True)
+    descripcion: str
