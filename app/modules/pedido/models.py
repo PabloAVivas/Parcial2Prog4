@@ -67,6 +67,15 @@ class DetallePedido(SQLModel, table=True):
 
     created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)))
 
+SNAPSHOT_FIELDS_DETALLES = {'nombre_snapshot', 'precio_snapshot', 'subtotal_snap'}
+
+@event.listens_for(DetallePedido, "before_update")
+def prevent_snapshot_modification(mapper, connection, target):
+    state = inspect(target)
+    for attr in state.attrs:
+        if attr.key in SNAPSHOT_FIELDS_DETALLES and attr.history.has_changes():
+            raise ValueError(f"El campo '{attr.key}' es una snapshot y no puede ser modificado.")
+
 
 
 class Pedido(SQLModel, table=True):
@@ -103,13 +112,13 @@ class Pedido(SQLModel, table=True):
     updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)))
     deleted_at: Optional[datetime] = Field(sa_column=Column(DateTime(timezone=True), nullable=True, default=None))
 
-SNAPSHOT_FIELDS = {'subtotal', 'descuento', 'costo_envio', 'total'}
+SNAPSHOT_FIELDS_PEDIDOS = {'subtotal', 'descuento', 'costo_envio', 'total'}
 
 @event.listens_for(Pedido, "before_update")
 def prevent_snapshot_modification(mapper, connection, target):
     state = inspect(target)
     for attr in state.attrs:
-        if attr.key in SNAPSHOT_FIELDS and attr.history.has_changes():
+        if attr.key in SNAPSHOT_FIELDS_PEDIDOS and attr.history.has_changes():
             raise ValueError(f"El campo '{attr.key}' es una snapshot y no puede ser modificado.")
         
 
@@ -124,26 +133,24 @@ class HistorialEstadoPedido(SQLModel, table=True):
         sa_column=Column(
             Integer,
             ForeignKey("pedido.id", ondelete="CASCADE"),
-            foreign_key=True,
             nullable=False
         )
     )
-    estado_desde: str = Field(
+    estado_desde: Optional[str] = Field(
         sa_column=Column(
             String(20),
             ForeignKey("estado_pedido.codigo"),
-            foreign_key=True,
-            nullable=False
+            nullable=True,
+            default=None
         )
     )
     estado_hasta: str = Field(
         sa_column=Column(
             String(20),
             ForeignKey("estado_pedido.codigo"),
-            foreign_key=True,
             nullable=False
         )
     )
 
-    motivo: Optional[str] = Field(default= None)
+    motivo: Optional[str] = Field(nullable=True,default= None)
     created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)))

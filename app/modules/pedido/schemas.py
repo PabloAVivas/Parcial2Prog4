@@ -49,6 +49,6 @@ class PedidoRead(SQLModel):
     updated_at: datetime
 
 class PedidoHistorialUpdate(SQLModel):
-    estado_codigo: str
+    estado_bool: Optional[bool] = True
     notas: Optional[str] = None
     motivo: Optional[str] = None

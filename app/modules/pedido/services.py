@@ -36,42 +36,6 @@ class PedidoService:
             )
         return forma_pago
 
-    def _map_to_read(self, pedido: Pedido) -> PedidoRead:
-        detalles_pedido = [
-            DetallePedidoRead(
-                pedido_id=link.pedido_id,
-                producto_id=link.producto_id,
-                cantidad=link.cantidad,
-                nombre_snapshot=link.nombre_snapshot,
-                precio_snapshot=link.precio_snapshot,
-                subtotal_snap=link.subtotal_snap,
-                personalizacion=link.personalizacion,
-                created_at=link.created_at
-            ) for link in pedido.detalle_pedidos
-        ]
-
-        if not pedido.historial_estado:
-            res_dict = pedido.model_dump()
-            res_dict["detalle_pedidos"] = detalles_pedido
-
-            return PedidoRead(**res_dict)
-        
-        historiales_estados = [
-            HistorialEstadoPedidoRead(
-                id=link.id,
-                pedido_id=link.pedido_id,
-                estado_desde=link.estado_desde,
-                estado_hasta=link.estado_hasta,
-                motivo=link.motivo,
-                created_at=link.created_at
-            ) for link in pedido.historial_estado
-        ]
-        res_dict = pedido.model_dump()
-        res_dict["detalle_pedidos"] = detalles_pedido
-        res_dict["historial_estado"] = historiales_estados
-
-        return PedidoRead(**res_dict)
-
     def crear(self, data: PedidoCreate) -> PedidoRead:
         with PedidoUnitOfWork(self._session) as uow:
             
@@ -80,7 +44,7 @@ class PedidoService:
 
             pedido = Pedido(
                 estado_codigo=estado,
-                forma_pago_codigo=data.forma_pago_codigo,
+                forma_pago_codigo=data.forma_pago_codigo.upper(),
                 subtotal=data.subtotal,
                 descuento=data.descuento,
                 costo_envio=data.costo_envio,
@@ -99,9 +63,15 @@ class PedidoService:
                 producto = uow.producto.get_by_id(depe_input.producto_id)
                 if not producto:
                     raise HTTPException(
-                        status_code=404,
-                        detail=f"Producto {depe_input.producto_id} no encontrado",
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Producto con el id {depe_input.producto_id} no encontrado",
                     )
+                if  depe_input.cantidad > producto.stock_cantidad:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                        detail=f"No hay stock suficiente en Producto {producto.nombre}",
+                    )
+                producto.stock_cantidad -= depe_input.cantidad
                 subtotal = float(producto.precio_base) * float(depe_input.cantidad)
                 detalle_pedido = DetallePedido(
                     pedido_id = pedido.id,
@@ -112,44 +82,79 @@ class PedidoService:
                     subtotal_snap = subtotal,
                     personalizacion = depe_input.personalizacion
                 )
-                uow.pedido.add(detalle_pedido)
+                uow.detalle_pedido.add(detalle_pedido)
+            """
+            historial = HistorialEstadoPedido(
+                pedido_id= pedido.id,
+                estado_desde=None,
+                estado_hasta= estado,
+                motivo= ""
+            )
+            uow.historial_estado_pedido.add(historial)
+            """
 
             uow.flush()
             uow.refresh(pedido)
 
-            return self._map_to_read(pedido)
+            result = PedidoRead.model_validate(pedido)
+        return result
     
     def obtener_todos(self, offset: Optional[int] = 0, limit: Optional[int] = 100) -> list[PedidoRead]:
         with PedidoUnitOfWork(self._session) as uow:
             pedidos = uow.pedido.get_all(offset=offset, limit=limit)
 
-            return [self._map_to_read(p) for p in pedidos]
+            result = [PedidoRead.model_validate(p) for p in pedidos]
+        return result
         
     def obtener_por_id(self, pedido_id: int) -> PedidoRead:
         with PedidoUnitOfWork(self._session) as uow:
             pedido = self._get_or_404(uow, pedido_id)
-            return self._map_to_read(pedido)
+            result = PedidoRead.model_validate(pedido)
+        return result
         
     def actualizar(self, pedido_id: int, data: PedidoHistorialUpdate) -> PedidoRead:
         with PedidoUnitOfWork(self._session) as uow:
 
             pedido = self._get_or_404(uow, pedido_id)
-            self._get_estado_or_404(uow, data.estado_codigo)
+            estado = self._get_estado_or_404(uow, pedido.estado_codigo)
+            nuevo_estado = None
+            if not data.estado_bool:
+                if estado.orden >=4:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"No se puede cancelar un pedido en estado: {pedido.estado_codigo}",
+                    )
+                nuevo_estado = "CANCELADO"
+            elif data.estado_bool:
+                match pedido.estado_codigo:
+                    case "PENDIENTE":
+                        nuevo_estado = "CONFIRMADO"
+                    case "CONFIRMADO":
+                        nuevo_estado = "EN_PREPARACION"
+                    case "EN_PREPARACION":
+                        nuevo_estado = "EN_CAMINO"
+                    case "EN_CAMINO":
+                        nuevo_estado = "ENTREGADO"
+                    case "ENTREGADO" | "CANCELADO":
+                        raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"No se puede avanzar un pedido que ya esta en estado: {pedido.estado_codigo}",
+                    )
 
             historial = HistorialEstadoPedido(
                 pedido_id= pedido.id,
                 estado_desde= pedido.estado_codigo,
-                estado_hasta= data.estado_codigo,
+                estado_hasta= nuevo_estado,
                 motivo= data.motivo
             )
-            uow.pedido.add(historial)
+            uow.historial_estado_pedido.add(historial)
 
-            patch = data.model_dump(exclude_unset=True, exclude={"motivo"})
+            patch = data.model_dump(exclude_unset=True, exclude={"estado_bool", "motivo"})
+            patch["estado_codigo"] = nuevo_estado
 
             for field, value in patch.items():
                 setattr(pedido, field, value)
 
             uow.pedido.add(pedido)
-            uow.flush()
-            uow.refresh(pedido)
-            return self._map_to_read(pedido)
+            result = PedidoRead.model_validate(pedido)
+        return result

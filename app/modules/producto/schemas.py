@@ -21,8 +21,14 @@ class IngredienteBasicRead(SQLModel):
     es_alergeno: bool
     es_removible: bool
 
+class UnidadMedidaRead(SQLModel):
+    nombre: str
+    simbolo: str
+    tipo: str
+
 class ProductoCreate(SQLModel):
     nombre: str
+    unidad_medida_id: int
     descripcion: str
     precio_base: float
     imagenes_url: list[str] = []
