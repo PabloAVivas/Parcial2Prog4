@@ -8,8 +8,14 @@ class ProductoBasicRead(SQLModel):
     precio_base: float
     stock_cantidad: int
 
+class UnidadMedidaRead(SQLModel):
+    nombre: str
+    simbolo: str
+    tipo: str
+
 class IngredienteCreate(SQLModel):
     nombre: str
+    unidad_medida_id: int
     descripcion: str
     es_alergeno: Optional[bool] = False
 

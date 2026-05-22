@@ -1,7 +1,7 @@
 from typing import Optional
 from fastapi import HTTPException, status
 from sqlmodel import Session
-from app.modules.producto.models import Producto
+from app.modules.producto.models import Producto, UnidadMedida
 from app.modules.producto.schemas import ProductoCreate, ProductoUpdate, ProductoRead, ProductoPaginadoResponse, CategoriaBasicRead, IngredienteBasicRead
 from datetime import datetime, timezone
 from app.modules.producto.unit_of_work import ProductoUnitOfWork
@@ -18,7 +18,7 @@ class ProductoService:
                 detail=f"Producto con id={producto_id} no encontrado",
             )
         return producto
-    
+
     def _map_to_read(self, producto: Producto) -> ProductoRead:
         categorias_read = [
             CategoriaBasicRead(
@@ -46,8 +46,15 @@ class ProductoService:
 
     def crear(self, data: ProductoCreate) -> ProductoRead:
         with ProductoUnitOfWork(self._session) as uow:
+            unidad = uow.producto.get_unidad(data.unidad_medida_id)
+            if not unidad:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Unidad de medida con id={data.unidad_medida_id} no encontrado",
+                )
             producto = Producto(
                 nombre=data.nombre,
+                unidad_medida_id=data.unidad_medida_id,
                 descripcion=data.descripcion,
                 precio_base=data.precio_base,
                 imagenes_url=data.imagenes_url,

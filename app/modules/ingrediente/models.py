@@ -1,16 +1,28 @@
 from typing import Optional, TYPE_CHECKING, List
-from sqlalchemy import Column
+from sqlalchemy import Column, ForeignKey, Integer
 from sqlmodel import Field, Relationship, SQLModel, DateTime
 from app.modules.producto.models import ProductoIngredienteLink
 from datetime import datetime, timezone
+
 if TYPE_CHECKING:
     from app.modules.producto.models import Producto
+    from app.modules.producto.models import UnidadMedida
 
 
 class Ingrediente(SQLModel, table=True):
     __tablename__ = "ingrediente"
 
     id: Optional[int] = Field(default=None, primary_key=True)
+
+    unidad_medida_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("unidad_medida.id"),
+            foreign_key=True,
+            nullable=False
+        )
+    )
+
     nombre: str = Field(index=True, unique=True, max_length=100)
     descripcion: str
     es_alergeno: bool = Field(default=False)
@@ -18,6 +30,7 @@ class Ingrediente(SQLModel, table=True):
     created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)))
     updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)))
     
+    unidad_medida: "UnidadMedida" = Relationship()
     
     producto_links: List["Producto"] = Relationship(
         back_populates="ingredientes",

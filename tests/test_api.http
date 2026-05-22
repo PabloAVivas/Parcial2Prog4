@@ -186,5 +186,15 @@ Content-Type: {{json}}
     ]
 }
 
-###
+### get pedidos
 GET {{baseUrl}}/pedidos
+
+### actualizar estado
+PATCH {{baseUrl}}/pedidos/2
+Content-Type: {{json}}
+
+{
+  "estado_bool": true,
+  "notas": "",
+  "motivo": "PORQUE SI"
+}

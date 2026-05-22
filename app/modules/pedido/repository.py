@@ -11,3 +11,19 @@ class PedidoRepository(BaseRepository[Pedido]):
     
     def get_forma(self, codigo:str) -> FormaPago:
         return self.session.get(FormaPago, codigo.upper())
+
+class DetallePedidoRepository:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def add(self, instance: DetallePedido) -> DetallePedido:
+        self.session.add(instance)
+        return instance
+
+class HistorialEstadoPedidoRepository:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def add(self, instance: HistorialEstadoPedido) -> HistorialEstadoPedido:
+        self.session.add(instance)
+        return instance

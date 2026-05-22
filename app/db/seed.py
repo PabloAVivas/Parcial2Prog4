@@ -1,6 +1,27 @@
-from sqlmodel import Session
+from sqlmodel import Session, select
 from app.core.database import engine
 from app.modules.pedido.models import EstadoPedido, FormaPago
+from app.modules.producto.models import UnidadMedida
+
+def seed_unidad_medida(session:Session) -> None:
+    unidades = [
+        {"nombre":"kilogramo", "simbolo":"kg", "tipo":"masa"},
+        {"nombre":"gramo", "simbolo":"g", "tipo":"masa"},
+        {"nombre":"litro", "simbolo":"L", "tipo":"volumen"},
+        {"nombre":"mililitro", "simbolo":"mL", "tipo":"volumen"},
+        {"nombre":"pieza", "simbolo":"u", "tipo":"unidad"},
+        {"nombre":"docena", "simbolo":"doc", "tipo":"unidad"},
+        {"nombre":"metro cuadrado", "simbolo":"m²", "tipo":"area"},
+    ]
+    for data in unidades:
+        statement = select(UnidadMedida).where(UnidadMedida.nombre == data["nombre"])
+        existing = session.exec(statement).first()
+        
+        if not existing:
+            session.add(UnidadMedida(**data))
+            print(f"UnidadMedida creada: {data['nombre']}")
+        else:
+            print(f"UnidadMedida ya existe: {data['nombre']}")
 
 def seed_estados_pedido(session: Session) -> None:
     estados = [
@@ -34,9 +55,8 @@ def seed_formas_pago(session: Session) -> None:
             print(f"FormaPago ya existe: {data['codigo']}")
 
 def seed_all() -> None:
-    """Función principal para ejecutar todos los seeds bajo una misma sesión"""
-    print("Iniciando el seeding de datos...")
     with Session(engine) as session:
+        seed_unidad_medida(session)
         seed_estados_pedido(session)
         seed_formas_pago(session)
         session.commit()
