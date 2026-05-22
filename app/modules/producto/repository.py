@@ -1,6 +1,6 @@
 from sqlmodel import Session, select, func, delete
 from app.core.repository import BaseRepository
-from app.modules.producto.models import Producto, ProductoCategoriaLink, ProductoIngredienteLink
+from app.modules.producto.models import Producto, ProductoCategoriaLink, ProductoIngredienteLink, UnidadMedida
 
 class ProductoRepository(BaseRepository[Producto]):
     def __init__(self, session: Session) -> None:
@@ -16,6 +16,9 @@ class ProductoRepository(BaseRepository[Producto]):
             self.session.exec(query.offset(offset).limit(limit)).all()
         )
     
+    def get_unidad(self, unidad_medida_id: int) -> UnidadMedida:
+        return self.session.get(UnidadMedida, unidad_medida_id)
+
     def add_categoria(self, producto_id: int, categoria_id: int, es_principal: bool = False) -> ProductoCategoriaLink:
         link = ProductoCategoriaLink(
             producto_id=producto_id,

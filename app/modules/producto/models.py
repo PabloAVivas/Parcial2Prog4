@@ -8,6 +8,16 @@ if TYPE_CHECKING:
     from app.modules.categoria.models import Categoria
     from app.modules.ingrediente.models import Ingrediente
 
+class UnidadMedida(SQLModel, table=True):
+
+    __tablename__ = "unidad_medida"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    nombre: str = Field(unique=True, max_length=50, nullable=False)
+    simbolo: str = Field(unique=True, max_length=10, nullable=False)
+    tipo: str = Field(max_length=20, nullable=False)
+    created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)))
+
 class ProductoCategoriaLink(SQLModel, table=True):
 
     __tablename__ = "producto_categoria_link"
@@ -61,6 +71,17 @@ class Producto(SQLModel, table=True):
     __tablename__ = "producto"
 
     id: Optional[int] = Field(default=None, primary_key=True)
+
+    unidad_medida_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("unidad_medida.id"),
+            foreign_key=True,
+            nullable=True,
+            default= None
+        )
+    )
+
     nombre: str = Field(index=True, nullable=False, max_length=150)
     descripcion: str = Field(nullable=True)
     precio_base: float = Field(ge=0, nullable=False, max_digits=10, decimal_places=2)
@@ -72,10 +93,13 @@ class Producto(SQLModel, table=True):
     updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)))
     deleted_at: Optional[datetime] = Field(sa_column=Column(DateTime(timezone=True), nullable=True, default=None))
     
+    unidad_medida: "UnidadMedida" = Relationship()
+
     categorias: List["Categoria"] = Relationship(
         back_populates="productos",
         link_model=ProductoCategoriaLink,
     )
+    
     ingredientes: List["Ingrediente"] = Relationship(
         back_populates="producto_links",
         link_model=ProductoIngredienteLink,
