@@ -1,8 +1,9 @@
 from typing import Optional
 from fastapi import HTTPException, status
 from sqlmodel import Session
-from app.modules.producto.models import Producto, UnidadMedida
-from app.modules.producto.schemas import ProductoCreate, ProductoUpdate, ProductoRead, ProductoPaginadoResponse, CategoriaBasicRead, IngredienteBasicRead
+from sqlalchemy.orm import selectinload
+from app.modules.producto.models import Producto, ProductoCategoriaLink, ProductoIngredienteLink
+from app.modules.producto.schemas import ProductoCreate, ProductoUpdate, ProductoRead, ProductoPaginadoResponse, CategoriaBasicRead, IngredienteBasicRead, UnidadMedidaRead
 from datetime import datetime, timezone
 from app.modules.producto.unit_of_work import ProductoUnitOfWork
 
@@ -11,7 +12,7 @@ class ProductoService:
         self._session = session
 
     def _get_or_404(self, uow: ProductoUnitOfWork, producto_id: int) -> Producto:
-        producto = uow.producto.get_by_id(producto_id)
+        producto = uow.producto.get_by_id_categorias_ingredientes(producto_id)
         if not producto:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -20,6 +21,12 @@ class ProductoService:
         return producto
 
     def _map_to_read(self, producto: Producto) -> ProductoRead:
+        unidad_medida=UnidadMedidaRead(
+            nombre=producto.unidad_medida.nombre,
+            simbolo=producto.unidad_medida.simbolo,
+            tipo=producto.unidad_medida.tipo
+        )
+        
         categorias_read = [
             CategoriaBasicRead(
                 id=link.categoria_id,
@@ -33,11 +40,14 @@ class ProductoService:
                 id=link.ingrediente_id,
                 nombre=link.ingrediente.nombre,
                 es_alergeno=link.ingrediente.es_alergeno,
+                cantidad= link.cantidad,
+                unidad_medida= link.unidad_medida,
                 es_removible=link.es_removible
             ) for link in producto.ingrediente_links
         ]
 
         res_dict = producto.model_dump()
+        res_dict["unidad_medida"] = unidad_medida
         res_dict["categorias"] = categorias_read
         res_dict["ingredientes"] = ingredientes_read
 
@@ -91,12 +101,12 @@ class ProductoService:
                         status_code=404,
                         detail=f"Ingrediente {ing_input.id} no encontrado",
                     )
-                uow.producto.add_ingrediente(producto.id, ing_input.id, ing_input.es_removible)
+                uow.producto.add_ingrediente(producto.id, ing_input.id, ing_input.cantidad, ing_input.unidad_medida_id, ing_input.es_removible)
 
             uow.flush()
-            uow.refresh(producto)
+            producto_creado = uow.producto.get_by_id_categorias_ingredientes(producto.id)
 
-            return self._map_to_read(producto)
+            return self._map_to_read(producto_creado)
 
     def obtener_todos(self, offset: int = 0, limit: int = 100, nombre: Optional[str] = None) -> ProductoPaginadoResponse:
         with ProductoUnitOfWork(self._session) as uow:
@@ -121,7 +131,14 @@ class ProductoService:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Solo se puede crear un producto si tiene al menos una categoría y un ingrediente"
                 )
-
+            
+            unidad = uow.producto.get_unidad(data.unidad_medida_id)
+            if not unidad:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Unidad de medida con id={data.unidad_medida_id} no encontrado",
+                )
+            
             patch = data.model_dump(exclude_unset=True, exclude={"categorias", "ingredientes"})
 
             for field, value in patch.items():
@@ -155,12 +172,12 @@ class ProductoService:
                             status_code=404,
                             detail=f"Ingrediente {ing_input.id} no encontrado",
                         )
-                    uow.producto.add_ingrediente(producto.id, ing_input.id, ing_input.es_removible)
+                    uow.producto.add_ingrediente(producto.id, ing_input.id, ing_input.cantidad, ing_input.unidad_medida_id, ing_input.es_removible)
 
-            uow.commit()
-            uow.refresh(producto)
+            uow.flush()
+            producto_actualizado = uow.producto.get_by_id_categorias_ingredientes(producto.id)
 
-            return self._map_to_read(producto)
+            return self._map_to_read(producto_actualizado)
 
     def borrado_logico(self, producto_id: int) -> None:
         with ProductoUnitOfWork(self._session) as uow:
@@ -168,5 +185,4 @@ class ProductoService:
             producto.activo = False
             producto.deleted_at = datetime.now(timezone.utc)
             uow.producto.add(producto)
-            uow.commit()
 

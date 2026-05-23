@@ -63,6 +63,19 @@ class ProductoIngredienteLink (SQLModel, table=True):
             nullable=False
         )
     )
+    cantidad: float = Field(ge=0, nullable=False, max_digits=10, decimal_places=2)
+
+    unidad_medida_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("unidad_medida.id"),
+            foreign_key=True,
+            nullable=False
+        )
+    )
+
+    unidad_medida: "UnidadMedida" = Relationship()
+    
     es_removible: bool = Field(nullable=False, default=False)
     producto: "Producto" = Relationship(back_populates="ingrediente_links")
     ingrediente: "Ingrediente" = Relationship()

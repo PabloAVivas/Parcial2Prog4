@@ -20,17 +20,15 @@ class DetallePedidoRead(SQLModel):
 class HistorialEstadoPedidoRead(SQLModel):
     id: int
     pedido_id: int
-    estado_desde: str
+    estado_desde: Optional[str] = None
     estado_hasta: str
-    motivo: str
+    motivo: Optional[str] = None
     created_at: datetime
 
 class PedidoCreate(SQLModel):
     forma_pago_codigo: str
-    subtotal: float
     descuento: float
     costo_envio: float
-    total: float
     notas: str
     detalle_pedidos: List[DetallePedidoCreate] = []
 
@@ -50,5 +48,4 @@ class PedidoRead(SQLModel):
 
 class PedidoHistorialUpdate(SQLModel):
     estado_bool: Optional[bool] = True
-    notas: Optional[str] = None
     motivo: Optional[str] = None
