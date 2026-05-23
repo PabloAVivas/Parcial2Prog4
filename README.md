@@ -60,7 +60,7 @@
   
   
 # Endpoints
-## Usuarios - IMPORTANTE -> Todos los endpoints tienen que tener Authorization Bearer + access_token en el headers
+## Usuarios - IMPORTANTE -> Todos los endpoints tienen que tener Authorization Bearer + access_token en el headers || Utilizamos cookies para almacenar el refresh_token, esta cookie tiene que enviarse en la peticion del endpoint "/refresh" para que pueda generar el nuevo access_token
 * POST -> UsuarioRegister -> http://localhost:8000/usuarios/register -> UsuarioRead
 * POST -> UsuarioLogin -> http://localhost:8000/usuarios/login -> TokenRead
 * PATCH -> http://localhost:8000/usuarios/refresh -> TokenRead
