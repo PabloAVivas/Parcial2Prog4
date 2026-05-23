@@ -1,5 +1,5 @@
-## Esquemas
-# Usuarios
+# Esquemas
+## Usuarios
 * ```
   UsuarioRead :
     id: int
@@ -59,8 +59,8 @@
   ```
   
   
-## Endpoints
-# Usuarios - IMPORTANTE -> Todos los endpoints tienen que tener Authorization Bearer + access_token en el headers
+# Endpoints
+## Usuarios - IMPORTANTE -> Todos los endpoints tienen que tener Authorization Bearer + access_token en el headers
 * POST -> UsuarioRegister -> http://localhost:8000/usuarios/register -> UsuarioRead
 * POST -> UsuarioLogin -> http://localhost:8000/usuarios/login -> TokenRead
 * PATCH -> http://localhost:8000/usuarios/refresh -> TokenRead
