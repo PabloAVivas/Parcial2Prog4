@@ -1,7 +1,7 @@
 from datetime import timedelta, timezone, datetime
 from sqlmodel import Session
 from fastapi import HTTPException, status
-from app.core.security import generar_refresh_token, hashear_password, verificar_password, create_access_token
+from app.core.security import generar_refresh_token, hashear_password, verificar_password, create_access_token, calcular_hash_token
 from app.modules.usuarios.unit_of_work import UsuarioUnitOfWork
 from app.modules.usuarios.models import Usuario, RefreshToken, DireccionEntrega, UsuarioRol, Rol
 from app.modules.usuarios.schemas import UsuarioRegister, UsuarioLogin, UsuarioRead, UsuarioUpdate, DireccionEntregaCreate, DireccionEntregaRead, DireccionEntregaUpdate, Token, AdministrarRol
@@ -58,6 +58,43 @@ class UsuarioService:
                 expires_in = nuevo_refresh_db.expires_at
             )
         
+    def refrescar_access_token(self, refresh_puro: str) -> str:
+
+        refresh_has = calcular_hash_token(refresh_puro)
+
+        with UsuarioUnitOfWork(self._session) as uow:
+
+            db_token = uow.refresh_token.get_by_hash(refresh_has)
+
+            if not db_token:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Refresh Token invalido"
+                )
+            
+            if db_token.revoked_at is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Refresh Token revocado"
+                )
+            
+            if db_token.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Refresh Token expirado"
+                )
+            
+            usuario = uow.usuario.get_by_id(db_token.usuario_id)
+            if not usuario or not usuario.activo:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Usuario no encontrado o inactivo"
+                )
+            
+            roles_codigos = [rol.codigo for rol in usuario.roles]
+            nuevo_access_token = create_access_token(data={"sub" : str(usuario.id), "role" : roles_codigos})
+            return nuevo_access_token
+
     def revocar_refresh_token(self, usuario_id: int) -> None:
         with UsuarioUnitOfWork(self._session) as uow:
             tokens = uow.refresh_token.get_active_by_usuario(usuario_id)
@@ -65,13 +102,16 @@ class UsuarioService:
                 token.revoked_at = datetime.now(timezone.utc)
             
 
-    def actualizar_usuario(self, usuario_id: int, usuario_data: UsuarioUpdate) -> UsuarioRead:
+    def actualizar_usuario(self, usuario_id: int, usuario_data: UsuarioUpdate, usuario_actual_id: int) -> UsuarioRead:
         with UsuarioUnitOfWork(self._session) as uow:
             usuario = uow.usuario.get_by_id(usuario_id)
-
+            usuario_actual = uow.get_by_id(usuario_actual_id)
             if not usuario:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
             
+            if usuario.id != usuario_actual.id:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No tienes permisos para realizar esta accion")
+
             usuario_actualizado = usuario_data.model_dump(exclude_unset=True)
 
             for field, value in usuario_actualizado.items():
@@ -86,12 +126,17 @@ class UsuarioService:
                 u.roles
             return [UsuarioRead.model_validate(u) for u in usuarios]
 
-    def obtener_usuario_por_id(self, usuario_id: int) -> UsuarioRead:
+    def obtener_usuario_por_id(self, usuario_id: int, usuario_actual_id: int) -> UsuarioRead:
         with UsuarioUnitOfWork(self._session) as uow:
+            usuario_actual = uow.usuario.get_by_id(usuario_actual_id)
+            roles = [rol.codigo for rol in usuario_actual.roles]
             usuario = uow.usuario.get_by_id(usuario_id)
             if not usuario:
-                raise HTTPException(status_code=status.HTTP_404_Not_FOUND, detail="Usuario no encontrado")
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
             
+            if usuario.id != usuario_actual.id and "ADMIN" not in roles:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usted no tiene los permisos para realizar esta accion")
+
             return UsuarioRead.model_validate(usuario)
     
     def crear_direccion_entrega(self, direccion_data: DireccionEntregaCreate, usuario_id: int) -> DireccionEntregaRead:
@@ -117,11 +162,16 @@ class UsuarioService:
 
             return DireccionEntregaRead.model_validate(direccion_nueva)
     
-    def obtener_direcciones_entrega(self, usuario_id: int) -> list[DireccionEntregaRead]:
+    def obtener_direcciones_entrega(self, usuario_id: int, usuario_actual_id: int) -> list[DireccionEntregaRead]:
         with UsuarioUnitOfWork(self._session) as uow:
+            usuario_actual = uow.usuarios.get_by_id(usuario_actual_id)
             usuario = uow.usuario.get_by_id(usuario_id)
             if not usuario:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+            
+            if usuario_actual.id != usuario.id:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No tienes permisos para acceder a este recurso")
+
             direcciones = uow.direccion_entrega.get_direcciones_by_usuario_id(usuario_id)
             lista_direcciones = [DireccionEntregaRead.model_validate(direccion) for direccion in direcciones]
             return lista_direcciones
