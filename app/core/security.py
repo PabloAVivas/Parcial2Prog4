@@ -54,3 +54,6 @@ def generar_refresh_token() -> tuple[str, str]:
     token_hash = hashlib.sha256(token_puro.encode()).hexdigest()
 
     return token_puro, token_hash
+
+def calcular_hash_token(token_puro: str) -> str:
+    return hashlib.sha256(token_puro.encode()).hexdigest()

@@ -31,6 +31,10 @@ class RefreshTokenRepository(BaseRepository[RefreshToken]):
     def get_active_by_usuario(self, usuario_id: int) -> None:
         statement = select(RefreshToken).where(RefreshToken.usuario_id == usuario_id, RefreshToken.revoked_at.is_(None))
         return self.session.exec(statement).all()
+    
+    def get_by_hash(self, refresh_hash: str) -> RefreshToken:
+        statement = select(RefreshToken).where(RefreshToken.token_hash == refresh_hash)
+        return self.session.exec(statement).first()
 
 class UsuarioRolRepository(BaseRepository[UsuarioRol]):
     def __init__(self, session: Session) -> None:

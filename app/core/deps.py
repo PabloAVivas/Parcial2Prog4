@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import Depends, HTTPException, status, Request
+from fastapi import Depends, HTTPException, status
 from sqlmodel import Session
 from fastapi.security import OAuth2PasswordBearer
 from app.core.config import settings
@@ -9,22 +9,7 @@ from app.modules.usuarios.unit_of_work import UsuarioUnitOfWork
 from app.modules.usuarios.models import Usuario
 from app.modules.usuarios.schemas import UsuarioRead
 
-class OAuth2PasswordBearerWithCookie(OAuth2PasswordBearer):
-    async def __call__(self, request: Request) -> str | None:
-        token = request.cookies.get("access_token")
-
-        if not token: 
-            if self.auto_error:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="No autenticado",
-                    headers={"WWW-Authenticated" : "Bearer"}
-                )
-            else:
-                return None
-        return token
-
-oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="usuarios/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="usuarios/login")
 
 def get_usuario_uow(session: Session = Depends(get_session)) -> UsuarioUnitOfWork:
     return UsuarioUnitOfWork(session)
@@ -43,16 +28,12 @@ async def get_current_user(
     if payload is None:
         raise credentials_exception
     
-    usuario_id: int | None = payload.get("sub")
+    usuario_id: int | None = int(payload.get("sub"))
     if usuario_id is None:
         raise credentials_exception
     
     usuario = uow.usuario.get_by_id(usuario_id)
     if usuario is None:
-        raise credentials_exception
-    
-    token_activo = uow.refresh_token.get_active_by_usuario(usuario_id)
-    if not token_activo:
         raise credentials_exception
         
     return UsuarioRead.model_validate(usuario)
