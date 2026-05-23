@@ -26,7 +26,7 @@ class DireccionEntregaCreate(SQLModel):
     es_principal: bool = False
 
 class DireccionEntregaUpdate(SQLModel):
-    direccion_id: int
+    usuario_id: int
     alias: Optional[str] = None
     linea1: Optional[str] = None
     linea2: Optional[str] = None
@@ -55,6 +55,11 @@ class UsuarioUpdate(SQLModel):
     celular: Optional[str] = None
     activo: Optional[bool] = None
 
+class RolRead(SQLModel):
+    codigo: str
+    nombre: str
+    descripcion: str
+
 class UsuarioRead(SQLModel):
     id: int
     nombre: str
@@ -62,12 +67,14 @@ class UsuarioRead(SQLModel):
     email: str
     celular: str
     direcciones: List["DireccionEntregaRead"] = []
+    activo: bool
+    roles: list[RolRead]
 
 class Token(SQLModel):
     access_token: str
     refresh_token: Optional[str] = None
     token_type: str
-    expires_in: int
+    expires_in: datetime
 
 class AdministrarRol(SQLModel):
     usuario_id: int
