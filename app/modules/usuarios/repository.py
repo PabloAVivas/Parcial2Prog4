@@ -1,8 +1,8 @@
 from turtle import update
 
 from app.core.repository import BaseRepository
-from app.modules.usuarios.model import Usuario, Rol, RefreshToken, UsuarioRol, DireccionEntrega
-from sqlmodel import Session, select, func, delete, udpate
+from app.modules.usuarios.models import Usuario, Rol, RefreshToken, UsuarioRol, DireccionEntrega
+from sqlmodel import Session, select, func, delete, update
 
 class UsuarioRepository(BaseRepository[Usuario]):
     def __init__(self, session: Session) -> None:
@@ -11,10 +11,6 @@ class UsuarioRepository(BaseRepository[Usuario]):
     def get_by_email(self, email: str) -> Usuario | None:
         statement = select(Usuario).where(Usuario.email == email)
         return self.session.exec(statement).first()
-    
-    def desactivate_usuario(self, usuario_id: int) -> None:
-        statement = update(Usuario).where(Usuario.id == usuario_id).values(activo=False)
-        return self.session.exec(statement)
     
 class RolRepository(BaseRepository[Rol]):
     def __init__(self, session: Session) -> None:
@@ -27,6 +23,14 @@ class RolRepository(BaseRepository[Rol]):
 class RefreshTokenRepository(BaseRepository[RefreshToken]):
     def __init__(self, session: Session) -> None:
         super().__init__(session, RefreshToken)
+
+    def get_by_usuario(self, usuario_id: int) -> None:
+        statement = select(RefreshToken).where(RefreshToken.usuario_id == usuario_id)
+        return self.session.exce(statement).first()
+    
+    def get_active_by_usuario(self, usuario_id: int) -> None:
+        statement = select(RefreshToken).where(RefreshToken.usuario_id == usuario_id, RefreshToken.revoked_at.is_(None))
+        return self.session.exec(statement).all()
 
 class UsuarioRolRepository(BaseRepository[UsuarioRol]):
     def __init__(self, session: Session) -> None:

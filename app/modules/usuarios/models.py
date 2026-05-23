@@ -9,7 +9,7 @@ class UsuarioRol(SQLModel, table=True):
 
     usuario_id: int = Field(foreign_key="usuario.id", primary_key=True)
     rol_codigo: str = Field(foreign_key="rol.codigo", primary_key=True)
-    asignado_por_id: int = Field(foreign_key="usuario.id", nullable=False)
+    asignado_por_id: int = Field(foreign_key="usuario.id", nullable=True)
     expires_at: Optional[datetime] = Field(sa_column=Column(DateTime(timezone=True), nullable=True, default=None))
     created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)))
 
@@ -27,9 +27,14 @@ class Usuario(SQLModel, table=True):
     updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)))
     deleted_at: Optional[datetime] = Field(sa_column=Column(DateTime(timezone=True), nullable=True, default=None))
 
-    direcciones: List["DireccionEntrega"] = Relationship(back_populates="usuario")
-    roles: List["Rol"] = Relationship(back_populates="usuarios", link_model=UsuarioRol)
-    tokens: List["RefreshToken"] = Relationship(back_populates="usuario")
+    direcciones: List["DireccionEntrega"] = Relationship()
+    roles: List["Rol"] = Relationship(
+        link_model=UsuarioRol,
+        sa_relationship_kwargs={
+            "primaryjoin" : "Usuario.id == UsuarioRol.usuario_id",
+            "secondaryjoin": "Rol.codigo == UsuarioRol.rol_codigo"
+        })
+    tokens: List["RefreshToken"] = Relationship()
 
 class RefreshToken(SQLModel, table=True):
     __tablename__ = 'refresh_token'
@@ -56,6 +61,7 @@ class DireccionEntrega(SQLModel, table=True):
     latitud: float = Field(sa_column=Column(Numeric(9, 6)))
     longitud: float = Field(sa_column=Column(Numeric(9,6)))
     es_principal: bool = Field(default=False, nullable=False)
+    activo: bool = Field(default=True, nullable=False)
     created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)))
     updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)))
     deleted_at: Optional[datetime] = Field(sa_column=Column(DateTime(timezone=True), nullable=True, default=None))
@@ -66,3 +72,10 @@ class Rol(SQLModel,table=True):
     codigo: str = Field(primary_key=True, default='CLIENT')
     nombre: str = Field(nullable=False, unique=True)
     descripcion: str
+
+    usuarios: list["Usuario"] = Relationship(
+        link_model=UsuarioRol,
+        sa_relationship_kwargs={
+            "primaryjoin" : "Rol.codigo == UsuarioRol.rol_codigo",
+            "secondaryjoin": "Usuario.id == UsuarioRol.usuario_id"
+        })

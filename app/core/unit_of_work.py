@@ -1,4 +1,6 @@
 from sqlmodel import Session
+from fastapi import Depends
+from app.core.database import get_session
 
 
 class UnitOfWork:
@@ -26,3 +28,6 @@ class UnitOfWork:
 
     def rollback(self) -> None:
         self._session.rollback()
+
+def get_uow(session: Session = Depends(get_session)) -> UnitOfWork:
+    return UnitOfWork(session)

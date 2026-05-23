@@ -2,6 +2,8 @@ from sqlmodel import Session, select
 from app.core.database import engine
 from app.modules.pedido.models import EstadoPedido, FormaPago
 from app.modules.producto.models import UnidadMedida
+from app.modules.usuarios.models import Usuario, Rol, UsuarioRol
+from app.core.security import hashear_password
 
 def seed_unidad_medida(session:Session) -> None:
     unidades = [
@@ -54,10 +56,46 @@ def seed_formas_pago(session: Session) -> None:
         else:
             print(f"FormaPago ya existe: {data['codigo']}")
 
+def seed_roles(session: Session) -> None:
+    roles = [
+        {"codigo" : "ADMIN","nombre" : "Administrador", "descripcion" : "Acceso total sin restricciones"},
+        {"codigo" : "STOCK","nombre" : "Gestor de Stock", "descripcion" : "Actualiza el stock y disponibilidad de los productos"},
+        {"codigo" : "PEDIDOS","nombre" : "Gestor de Pedidos", "descripcion" : "Avanzar estados de pedidos"},
+        {"codigo" : "CLIENT","nombre" : "Cliente", "descripcion" : "Navega la plataforma y gestiona sus datos"},
+    ]
+    for data in roles:
+        existing = session.get(Rol, data["codigo"])
+        if not existing:
+            session.add(Rol(**data))
+            print(f"Rol creado: {data['codigo']}")
+        else:
+            print(f"Rol ya existente: {data['codigo']}")
+
+def seed_usuarios(session: Session) -> None:
+    usuarios = [
+        {"nombre": "Admin", "apellido": "Principal", "celular" : "1234567890", "email" : "admin@foodstore.com", "password_hash" : hashear_password("admin123")}
+    ]
+    for data in usuarios:
+        existing = existing = session.exec(
+            select(Usuario).where(Usuario.email == data["email"])
+        ).first()
+        if not existing:
+            rol_admin = session.get(Rol, "ADMIN")
+            usuario = (Usuario(**data))
+            session.add(usuario)
+            session.flush()
+            session.add(UsuarioRol(
+                usuario_id = usuario.id,
+                rol_codigo = "ADMIN", 
+                asignado_por_id = None
+            ))
+
 def seed_all() -> None:
     with Session(engine) as session:
         seed_unidad_medida(session)
         seed_estados_pedido(session)
         seed_formas_pago(session)
+        seed_roles(session)
+        seed_usuarios(session)
         session.commit()
     print("Seeding finalizado con éxito.")

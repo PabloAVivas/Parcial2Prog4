@@ -3,7 +3,7 @@ from sqlmodel import Session
 from fastapi import HTTPException, status
 from app.core.security import generar_refresh_token, hashear_password, verificar_password, create_access_token
 from app.modules.usuarios.unit_of_work import UsuarioUnitOfWork
-from app.modules.usuarios.model import Usuario, RefreshToken, DireccionEntrega, UsuarioRol, Rol
+from app.modules.usuarios.models import Usuario, RefreshToken, DireccionEntrega, UsuarioRol, Rol
 from app.modules.usuarios.schemas import UsuarioRegister, UsuarioLogin, UsuarioRead, UsuarioUpdate, DireccionEntregaCreate, DireccionEntregaRead, DireccionEntregaUpdate, Token, AdministrarRol
 
 class UsuarioService:
@@ -15,13 +15,14 @@ class UsuarioService:
             if uow.usuario.get_by_email(usuario_data.email):
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El correo que se ingresó ya corresponde a un usuario registrado")
 
+            rol_cliente = self._session.get(Rol, "CLIENT")
             usuario = Usuario(
                 nombre = usuario_data.nombre,
                 apellido = usuario_data.apellido,
                 celular = usuario_data.celular,
                 email = usuario_data.email,
                 password_hash = hashear_password(usuario_data.password),
-                roles = [uow.rol.get_by_codigo("CLIENT")]
+                roles = [rol_cliente]
             )
 
             respuesta = UsuarioRead.model_validate(uow.usuario.add(usuario))
@@ -38,7 +39,7 @@ class UsuarioService:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El usuario se encuentra desactivado, por favor contactese con el soporte para mas informacion")
             
             roles_codigos = [rol.codigo for rol in usuario.roles]
-            access_token = create_access_token(data={"sub": usuario.id, "role":roles_codigos})
+            access_token = create_access_token(data={"sub": str(usuario.id), "role":roles_codigos})
 
             refresh_puro, refresh_hash = generar_refresh_token()
 
@@ -54,9 +55,16 @@ class UsuarioService:
                 access_token = access_token,
                 refresh_token = refresh_puro,
                 token_type = "bearer",
-                expires_in = nuevo_refresh_db.expires_at - datetime.now(timezone.utc)
+                expires_in = nuevo_refresh_db.expires_at
             )
         
+    def revocar_refresh_token(self, usuario_id: int) -> None:
+        with UsuarioUnitOfWork(self._session) as uow:
+            tokens = uow.refresh_token.get_active_by_usuario(usuario_id)
+            for token in tokens:
+                token.revoked_at = datetime.now(timezone.utc)
+            
+
     def actualizar_usuario(self, usuario_id: int, usuario_data: UsuarioUpdate) -> UsuarioRead:
         with UsuarioUnitOfWork(self._session) as uow:
             usuario = uow.usuario.get_by_id(usuario_id)
@@ -73,7 +81,10 @@ class UsuarioService:
     
     def obtener_usuarios(self) -> list[UsuarioRead]:
         with UsuarioUnitOfWork(self._session) as uow:
-            return uow.usuario.get_all()
+            usuarios = uow.usuario.get_all()
+            for u in usuarios:
+                u.roles
+            return [UsuarioRead.model_validate(u) for u in usuarios]
 
     def obtener_usuario_por_id(self, usuario_id: int) -> UsuarioRead:
         with UsuarioUnitOfWork(self._session) as uow:
@@ -81,15 +92,18 @@ class UsuarioService:
             if not usuario:
                 raise HTTPException(status_code=status.HTTP_404_Not_FOUND, detail="Usuario no encontrado")
             
-            return usuario
+            return UsuarioRead.model_validate(usuario)
     
-    def crear_direccion_entrega(self, direccion_data: DireccionEntregaCreate) -> DireccionEntregaRead:
+    def crear_direccion_entrega(self, direccion_data: DireccionEntregaCreate, usuario_id: int) -> DireccionEntregaRead:
         with UsuarioUnitOfWork(self._session) as uow:
             usuario = uow.usuario.get_by_id(direccion_data.usuario_id)
-            if not usuario: 
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+            if usuario.id != usuario_id: 
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="No tienes permisos para acceder a este recurso"
+                )
             
-            direcciones = uow.direcciones.get_all()
+            direcciones = uow.direccion_entrega.get_all()
             for direccion in direcciones:
                 if direccion == direccion_data:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Esta direccion ya se encuentra registrada")
@@ -97,25 +111,34 @@ class UsuarioService:
                 if direccion.es_principal and direccion_data.es_principal:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ya existe una direccion principal para este usuario")
             
-            direccion_nueva = DireccionEntregaRead.model_validate(uow.direcciones.add(direccion_data))
+            direccion_nueva = uow.direccion_entrega.add(DireccionEntrega(
+                **direccion_data.model_dump()
+            ))
 
-            return direccion_nueva
+            return DireccionEntregaRead.model_validate(direccion_nueva)
     
     def obtener_direcciones_entrega(self, usuario_id: int) -> list[DireccionEntregaRead]:
         with UsuarioUnitOfWork(self._session) as uow:
             usuario = uow.usuario.get_by_id(usuario_id)
             if not usuario:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
-            
-            return uow.direcciones.get_direcciones_by_usuario_id(usuario.id)
+            direcciones = uow.direccion_entrega.get_direcciones_by_usuario_id(usuario_id)
+            lista_direcciones = [DireccionEntregaRead.model_validate(direccion) for direccion in direcciones]
+            return lista_direcciones
 
-    def actualizar_direccion_entrega(self, direccion_id: int, direccion_data: DireccionEntregaUpdate) -> DireccionEntregaRead:
+    def actualizar_direccion_entrega(self, direccion_id: int, direccion_data: DireccionEntregaUpdate, usuario_id: int) -> DireccionEntregaRead:
         with UsuarioUnitOfWork(self._session) as uow:
-            direccion = uow.direcciones.get_by_id(direccion_id)
-            hay_principal = uow.direcciones.get_es_principal(direccion.usuario_id)
+            direccion = uow.direccion_entrega.get_by_id(direccion_id)
             if not direccion:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Direccion no encontrada")
             
+            if direccion.usuario_id != usuario_id:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZEDm,
+                    detail="No tienes los permisos para acceder a esta funcionalidad"
+                )
+
+            hay_principal = uow.direccion_entrega.get_es_principal(direccion.usuario_id)
             if hay_principal and direccion_data.es_principal:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ya existe una direccion principal para este usuario")
             
@@ -123,19 +146,25 @@ class UsuarioService:
             for field, value in direccion_actualizada.items():
                 setattr(direccion, field, value)
 
-            uow.direcciones.add(direccion)
+            uow.direccion_entrega.add(direccion)
 
             return DireccionEntregaRead.model_validate(direccion)
         
-    def eliminar_direccion_entrega(self, direccion_id: int) -> None:
+    def eliminar_direccion_entrega(self, direccion_id: int, usuario_id: int) -> None:
         with UsuarioUnitOfWork(self._session) as uow:
-            direccion = uow.direcciones.get_by_id(direccion_id)
+            direccion = uow.direccion_entrega.get_by_id(direccion_id)
             if not direccion:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Direccion no encontrada")
             
-            return uow.direcciones.delete(direccion_id)
+            if direccion.usuario_id != usuario_id:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="No tienes los permisos para realizar esta accion"
+                )
+            direccion.deleted_at = datetime.now(timezone.utc)
+            return uow.direccion_entrega.delete(direccion_id)
         
-    def asignar_rol(self, admin_id: int, informacion: AdministrarRol) -> None:
+    def asignar_rol(self, admin_id: int, informacion: AdministrarRol) -> UsuarioRead:
         with UsuarioUnitOfWork(self._session) as uow:
             usuario = uow.usuario.get_by_id(informacion.usuario_id)
             rol = uow.rol.get_by_codigo(informacion.codigo_rol)
@@ -146,19 +175,21 @@ class UsuarioService:
             if rol in usuario.roles:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El usuario ya tiene asignado este rol")
             
-            return uow.usuarioRol.add(UsuarioRol(
+            uow.usuario_rol.add(UsuarioRol(
                 usuario_id = usuario.id,
                 rol_codigo = informacion.codigo_rol,
                 asignado_por_id = admin_id,
                 expires_at = informacion.expires_at,
                 created_at = datetime.now(timezone.utc)
             ))
+            uow.refresh(usuario)
+            return UsuarioRead.model_validate(usuario)
         
-    def quitar_rol(self, admin_id: int, informacion: AdministrarRol) -> None:
+    def quitar_rol(self, informacion: AdministrarRol) -> None:
         with UsuarioUnitOfWork(self._session) as uow:
             usuario = uow.usuario.get_by_id(informacion.usuario_id)
             rol = uow.rol.get_by_codigo(informacion.codigo_rol)
-            usuario_rol = uow.usuarioRol.get_link(informacion.usuario_id, informacion.codigo_rol)
+            usuario_rol = uow.usuario_rol.get_link(informacion.usuario_id, informacion.codigo_rol)
             if not usuario:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
             if not rol:
@@ -166,9 +197,12 @@ class UsuarioService:
             if not usuario_rol:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El usuario no tiene asignado este rol")
             
-            return uow.usuarioRol.delete(usuario_rol.id)
+            uow.usuario_rol.delete(usuario_rol)
+            uow.refresh(usuario)
+
+            return UsuarioRead.model_validate(usuario)
         
-    def desactivar_usuario(self, usuario_id: int) -> None:
+    def desactivar_usuario(self, usuario_id: int):
         with UsuarioUnitOfWork(self._session) as uow:
             usuario = uow.usuario.get_by_id(usuario_id)
             if not usuario: 
@@ -176,5 +210,6 @@ class UsuarioService:
             if not usuario.activo:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El usuario ya se encuentra desactivado")
             usuario.deleted_at = datetime.now(timezone.utc)
+            usuario.activo = False
             uow.usuario.add(usuario)
-            return uow.usuario.desactivate_usuario(usuario.id)
+            
