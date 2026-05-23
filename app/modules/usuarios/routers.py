@@ -1,11 +1,10 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, status, Path, Response
+from fastapi import APIRouter, Depends, status, Path, Response, Request, HTTPException
 from sqlmodel import Session
 from app.core.database import get_session
 from app.core.deps import get_current_active_user, require_role
-from app.core.unit_of_work import get_uow
 from app.modules.usuarios.unit_of_work import UsuarioUnitOfWork
-from app.modules.usuarios.schemas import UsuarioRegister, UsuarioLogin, UsuarioRead, UsuarioUpdate, DireccionEntregaCreate, DireccionEntregaRead, DireccionEntregaUpdate, Token, AdministrarRol
+from app.modules.usuarios.schemas import UsuarioRegister, UsuarioLogin, UsuarioRead, UsuarioUpdate, DireccionEntregaCreate, DireccionEntregaRead, DireccionEntregaUpdate, Token, TokenRead, AdministrarRol
 from app.modules.usuarios.service import UsuarioService
 
 router = APIRouter()
@@ -29,15 +28,36 @@ def iniciar_sesion(
     token = service.login_usuario(usuario_data)
 
     response.set_cookie(
-        key="access_token",
-        value=token.access_token,
+        key="refresh_token",
+        value=token.refresh_token,
         httponly=True,
-        max_age=1800,
+        max_age=604800,
         samesite="lax",
         secure=False
     )
-    return Token.model_validate(token)
+    return TokenRead(
+        access_token = token.access_token,
+        token_type = token.token_type,
+        expires_in = 1800)
     
+@router.patch("/refresh", response_model=TokenRead, status_code=status.HTTP_200_OK, summary="Refresh de access token")
+def refrescar_token(request: Request, service: SeDe) -> TokenRead:
+    refresh_cookie = request.cookies.get("refresh_token")
+
+    if not refresh_cookie:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No se encuentra refresh token en la cookie"
+        )
+    
+    nuevo_access = service.refrescar_access_token(refresh_cookie)
+
+    return TokenRead(
+        access_token= nuevo_access,
+        token_type= "bearer",
+        expires_in= 1800
+    )
+
 @router.post("/logout", status_code=status.HTTP_200_OK, summary="Logout de usuario")
 def read_me(
     usuario_actual: Annotated[UsuarioRead, Depends(get_current_active_user)],
@@ -45,7 +65,7 @@ def read_me(
     response: Response
 ):
     response.set_cookie(
-        key="access_token",
+        key="refresh_token",
         value="",
         httponly=True,
         max_age=0,
@@ -83,13 +103,8 @@ def obtener_usuario(
     session:SeDe,
     usuario_actual: Annotated[UsuarioRead, Depends(get_current_active_user)],
     usuario_id: int = Path(gt=0)) -> UsuarioRead:
-    roles = [rol.codigo for rol in usuario_actual.roles]
-    if "ADMIN" not in roles and usuario_actual.id != usuario_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="No tienes permisos para acceder a este recurso"
-        )
-    return session.obtener_usuario_por_id(usuario_id)
+    
+    return session.obtener_usuario_por_id(usuario_id, usuario_actual.id)
 
 @router.patch("/{usuario_id}", response_model= UsuarioRead, status_code=status.HTTP_200_OK, summary="Actualizar un usuario")
 def actualizar(
@@ -97,13 +112,8 @@ def actualizar(
     usuario_actual: Annotated[UsuarioRead, Depends(get_current_active_user)],
     usuario_data: UsuarioUpdate,
     usuario_id: int = Path(gt=0)) -> UsuarioRead:
-    roles = [rol.codigo for rol in usuario_actual.roles]
-    if "ADMIN" not in roles and usuario_actual.id != usuario_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="No tienes permisos para acceder a este recurso"
-        )
-    return session.actualizar_usuario(usuario_id, usuario_data)
+
+    return session.actualizar_usuario(usuario_id, usuario_data, usuario_actual.id)
 
 @router.post("/direccion", response_model=DireccionEntregaRead, status_code=status.HTTP_201_CREATED, summary="Crear una direccion de entrga")
 def crear_direccion(
@@ -117,12 +127,8 @@ def obtener_direcciones(
     session: SeDe,
     usuario_actual: Annotated[UsuarioRead, Depends(get_current_active_user)],
     usuario_id: int = Path(gt=0)) -> list[DireccionEntregaRead]:
-    if usuario_actual.id != usuario_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="No tienes permisos para acceder a este recurso"
-        )
-    return session.obtener_direcciones_entrega(usuario_id)
+
+    return session.obtener_direcciones_entrega(usuario_id, usuario_actual.id)
 
 @router.patch("/direccion/{direccion_id}", response_model=DireccionEntregaRead, status_code=status.HTTP_200_OK, summary="Actualizar una direccion del usuario")
 def actualizar_direccion(
