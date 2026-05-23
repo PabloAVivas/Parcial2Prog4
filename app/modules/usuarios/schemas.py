@@ -66,13 +66,18 @@ class UsuarioRead(SQLModel):
     apellido: str
     email: str
     celular: str
-    direcciones: List["DireccionEntregaRead"] = []
+    direcciones: List[DireccionEntregaRead] = []
     activo: bool
     roles: list[RolRead]
 
 class Token(SQLModel):
     access_token: str
     refresh_token: Optional[str] = None
+    token_type: str
+    expires_in: datetime
+
+class TokenRead(SQLModel):
+    access_token: str
     token_type: str
     expires_in: datetime
 
