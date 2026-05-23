@@ -2,7 +2,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status, Query, Path
 from sqlmodel import Session
 from app.core.database import get_session
-from app.modules.categoria.schemas import CategoriaCreate, CategoriaRead, CategoriaUpdate, CategoriaPaginadaResponse
+from app.modules.categoria.schemas import CategoriaCreate, CategoriaRead, CategoriaUpdate, CategoriaPaginadaResponse, CategoriaTree
 from app.modules.categoria.services import CategoriaService
 
 router = APIRouter()
@@ -18,6 +18,10 @@ def alta_categoria(categoria: CategoriaCreate, session: SeDe) -> CategoriaRead:
 @router.get("/", response_model= CategoriaPaginadaResponse, summary="Obtener categorias paginados")
 def listar_categorias(offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100), nombre: str = Query(default=None) , session: CategoriaService = Depends(get_categoria_service)) -> CategoriaPaginadaResponse:
     return session.obtener_todas(offset=offset, limit=limit, nombre=nombre)
+
+@router.get("/tree", response_model=list[CategoriaTree])
+def get_categorias_tree(session: CategoriaService = Depends(get_categoria_service)):
+    return session.get_all_tree()
 
 @router.get("/{categoria_id}", response_model=CategoriaRead, summary="Obtener un categoria por id")
 def detalle_categoria(session: SeDe, categoria_id: int = Path(gt=0) ) -> CategoriaRead:

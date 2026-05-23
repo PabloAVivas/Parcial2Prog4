@@ -2,6 +2,8 @@ from typing import Optional
 from sqlmodel import Session
 from fastapi import HTTPException, status
 from app.modules.ingrediente.models import Ingrediente
+from sqlalchemy.orm import selectinload
+from app.modules.producto.models import  ProductoIngredienteLink
 from app.modules.ingrediente.schemas import IngredienteCreate, IngredienteUpdate, IngredienteRead, IngredientePaginadoResponse
 from app.modules.ingrediente.unit_of_work import IngredienteUnitOfWork
 
@@ -10,7 +12,7 @@ class IngredienteService:
         self._session = session
 
     def _get_or_404(self, uow: IngredienteUnitOfWork, ingrediente_id: int) -> Ingrediente:
-            ingrediente = uow.ingrediente.get_by_id(ingrediente_id)
+            ingrediente = uow.ingrediente.get_by_id_productos(ingrediente_id)
             if not ingrediente:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -20,12 +22,6 @@ class IngredienteService:
 
     def crear(self, data: IngredienteCreate) -> IngredienteRead:
         with IngredienteUnitOfWork(self._session) as uow:
-            unidad = uow.producto.get_unidad(data.unidad_medida_id)
-            if not unidad:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Unidad de medida con id={data.unidad_medida_id} no encontrado",
-                )
             ingrediente = Ingrediente(**data.model_dump())
             uow.ingrediente.add(ingrediente)
 
@@ -60,7 +56,8 @@ class IngredienteService:
                 setattr(ingrediente, field, value)
 
             uow.ingrediente.add(ingrediente)
-            result = IngredienteRead.model_validate(ingrediente)
+            ingrediente_actualizado = uow.ingrediente.get_by_id_productos(ingrediente.id)
+            result = IngredienteRead.model_validate(ingrediente_actualizado)
 
         return result
 
@@ -69,4 +66,3 @@ class IngredienteService:
             ingrediente = self._get_or_404(uow, ingrediente_id)
             ingrediente.activo = False
             uow.ingrediente.add(ingrediente)
-            uow.commit()
