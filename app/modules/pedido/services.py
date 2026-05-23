@@ -1,7 +1,10 @@
 from typing import Optional
 from fastapi import HTTPException, status
 from sqlmodel import Session
+from datetime import datetime, timezone
+from sqlalchemy.orm import selectinload
 from app.modules.pedido.models import Pedido, HistorialEstadoPedido, EstadoPedido, FormaPago, DetallePedido
+from app.modules.producto.models import Producto
 from app.modules.pedido.schemas import PedidoCreate, PedidoRead, PedidoHistorialUpdate, DetallePedidoCreate, DetallePedidoRead, HistorialEstadoPedidoRead
 from app.modules.pedido.unit_of_work import PedidoUnitOfWork
 
@@ -10,7 +13,7 @@ class PedidoService:
         self._session = session
 
     def _get_or_404(self, uow: PedidoUnitOfWork, pedido_id: int) -> Pedido:
-        pedido = uow.pedido.get_by_id(pedido_id)
+        pedido = uow.pedido.get_by_id_pedido(pedido_id)
         if not pedido:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -35,44 +38,63 @@ class PedidoService:
                 detail=f"Forma de pago con id={codigo} no encontrado",
             )
         return forma_pago
+    
+    def _get_producto_or_404(self, uow:PedidoUnitOfWork, producto_id: int) -> Producto:
+        producto = uow.producto.get_by_id(producto_id)
+        if not producto:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Producto con el id {producto_id} no encontrado",
+            )
+        return producto
+
+    def subtotal_producto(self, precio:float, cantidad:int) -> float:
+        subtotal = precio * cantidad
+        return subtotal
 
     def crear(self, data: PedidoCreate) -> PedidoRead:
         with PedidoUnitOfWork(self._session) as uow:
             
-            self._get_forma_or_404(uow, data.forma_pago_codigo)
-            estado = "PENDIENTE"
-
-            pedido = Pedido(
-                estado_codigo=estado,
-                forma_pago_codigo=data.forma_pago_codigo.upper(),
-                subtotal=data.subtotal,
-                descuento=data.descuento,
-                costo_envio=data.costo_envio,
-                total=data.total,
-                notas=data.notas,
-            )
             if not data.detalle_pedidos:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Solo se puede crear un pedido si tiene un detalle pedido como minimo",
                 )
+
+            subtotal_pedido = 0
+            for dp in data.detalle_pedidos:
+                producto = self._get_producto_or_404(uow, dp.producto_id)
+                subtotal_pedido += self.subtotal_producto(producto.precio_base, dp.cantidad)
+
+            self._get_forma_or_404(uow, data.forma_pago_codigo)
+            estado = "PENDIENTE"
+
+            total = subtotal_pedido - data.descuento + data.costo_envio
+
+            pedido = Pedido(
+                estado_codigo=estado,
+                forma_pago_codigo=data.forma_pago_codigo.upper(),
+                subtotal=subtotal_pedido,
+                descuento=data.descuento,
+                costo_envio=data.costo_envio,
+                total=total,
+                notas=data.notas,
+            )
             
             uow.pedido.add(pedido)
 
             for depe_input in data.detalle_pedidos:
-                producto = uow.producto.get_by_id(depe_input.producto_id)
-                if not producto:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Producto con el id {depe_input.producto_id} no encontrado",
-                    )
+                producto = self._get_producto_or_404(uow, depe_input.producto_id)
+
                 if  depe_input.cantidad > producto.stock_cantidad:
                     raise HTTPException(
                         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                         detail=f"No hay stock suficiente en Producto {producto.nombre}",
                     )
+                
                 producto.stock_cantidad -= depe_input.cantidad
-                subtotal = float(producto.precio_base) * float(depe_input.cantidad)
+                subtotal = self.subtotal_producto(producto.precio_base, depe_input.cantidad)
+
                 detalle_pedido = DetallePedido(
                     pedido_id = pedido.id,
                     producto_id = depe_input.producto_id,
@@ -83,25 +105,23 @@ class PedidoService:
                     personalizacion = depe_input.personalizacion
                 )
                 uow.detalle_pedido.add(detalle_pedido)
-            """
+            
             historial = HistorialEstadoPedido(
                 pedido_id= pedido.id,
-                estado_desde=None,
                 estado_hasta= estado,
-                motivo= ""
             )
             uow.historial_estado_pedido.add(historial)
-            """
+            
 
             uow.flush()
-            uow.refresh(pedido)
+            pedido_creado = uow.pedido.get_by_id_pedido(pedido.id)
 
-            result = PedidoRead.model_validate(pedido)
+            result = PedidoRead.model_validate(pedido_creado)
         return result
     
     def obtener_todos(self, offset: Optional[int] = 0, limit: Optional[int] = 100) -> list[PedidoRead]:
         with PedidoUnitOfWork(self._session) as uow:
-            pedidos = uow.pedido.get_all(offset=offset, limit=limit)
+            pedidos = uow.pedido.get_activo(offset=offset, limit=limit)
 
             result = [PedidoRead.model_validate(p) for p in pedidos]
         return result
@@ -149,12 +169,16 @@ class PedidoService:
             )
             uow.historial_estado_pedido.add(historial)
 
-            patch = data.model_dump(exclude_unset=True, exclude={"estado_bool", "motivo"})
-            patch["estado_codigo"] = nuevo_estado
-
-            for field, value in patch.items():
-                setattr(pedido, field, value)
-
+            pedido.estado_codigo = nuevo_estado
             uow.pedido.add(pedido)
-            result = PedidoRead.model_validate(pedido)
+            uow.flush()
+            pedido_actualizado = uow.pedido.get_by_id_pedido(pedido.id)
+            result = PedidoRead.model_validate(pedido_actualizado)
         return result
+
+    def borrado_logico(self, pedido_id: int) -> None:
+        with PedidoUnitOfWork(self._session) as uow:
+            pedido = self._get_or_404(uow, pedido_id)
+            pedido.activo = False
+            pedido.deleted_at = datetime.now(timezone.utc)
+            uow.pedido.add(pedido)

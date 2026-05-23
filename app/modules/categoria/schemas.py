@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from typing import Optional, List
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, Field
+from pydantic import BaseModel
 from datetime import datetime
 
 class ProductoBasicRead(SQLModel):
@@ -39,3 +42,13 @@ class CategoriaRead(SQLModel):
 class CategoriaPaginadaResponse(SQLModel):
     total: int
     data: List[CategoriaRead]
+
+class CategoriaTree(BaseModel):
+    id: int
+    nombre: str
+    descripcion: Optional[str]
+    imagen_url: Optional[str]
+    parent_id: Optional[int]
+    subcategorias: list["CategoriaTree"] = Field(default_factory=list)
+
+    model_config = {"from_attributes" : True}

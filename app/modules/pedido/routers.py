@@ -26,3 +26,7 @@ def detalle_pedido(session: SeDe, pedido_id: int = Path(gt=0) ) -> PedidoRead:
 @router.patch("/{pedido_id}", response_model=PedidoRead, summary="Actualizar un pedido con sus relaciones")
 def actualizar_pedido(datos: PedidoHistorialUpdate, session: SeDe, pedido_id: int = Path(gt=0) ) -> PedidoRead:
     return session.actualizar(pedido_id, datos)
+
+@router.delete("/{pedido_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Borrado logico de un pedido")
+def eliminar_pedido(session: SeDe, pedido_id: int = Path(gt=0) ) -> None:
+    session.borrado_logico(pedido_id)

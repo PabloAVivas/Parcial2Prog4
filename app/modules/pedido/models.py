@@ -63,8 +63,6 @@ class DetallePedido(SQLModel, table=True):
 
     activo: bool = Field(nullable=False, default=True)
 
-    productos: "Producto" = Relationship()
-
     created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)))
 
 SNAPSHOT_FIELDS_DETALLES = {'nombre_snapshot', 'precio_snapshot', 'subtotal_snap'}

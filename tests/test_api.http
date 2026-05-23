@@ -11,9 +11,9 @@ POST {{baseUrl}}/categorias/
 Content-Type: {{json}}
 
 {
-  "nombre": "HER-05",
-  "descripcion": "Herramientas Manuales",
-  "imagen_url": "http.prueba"
+  "nombre": "Hamburguesas",
+  "descripcion": "Todo tipo de hamburguesas",
+  "imagen_url": "https://foodish-api.com/images/burger/burger32.jpg"
 }
 
 ### Crear Categoria 2
@@ -21,34 +21,58 @@ POST {{baseUrl}}/categorias/
 Content-Type: {{json}}
 
 {
-  "nombre": "HER-06",
-  "descripcion": "Herramientas Manuales",
-  "imagen_url": "http.prueba",
-  "parent_id": 1
+  "nombre": "Pizzas",
+  "descripcion": "Todo tipo de pizzas",
+  "imagen_url": "hhttps://foodish-api.com/images/pizza/pizza2.jpg"
 }
 
-### Listar Categorias
-GET {{baseUrl}}/categorias/
-
-### Listar Categorias query
-GET {{baseUrl}}/categorias/?offset=0&limit=10&nombre=HER
-
-### Detalle de Categoria exitoso
-GET {{baseUrl}}/categorias/2
-
-### Actualizar Categoria
-PATCH {{baseUrl}}/categorias/2
+### Crear Categoria con id padre
+POST {{baseUrl}}/categorias/
 Content-Type: {{json}}
 
 {
-  "nombre": "HER-07",
-  "descripcion": "Herramientas de Jardinería y Taller",
-  "imagen_url": "http.prueba",
+  "nombre": "Hambuerguesas veganas",
+  "descripcion": "Hamburguesas libre de carne animal",
+  "imagen_url": "https://foodish-api.com/images/burger/burger35.jpg",
+  "parent_id": 1
+}
+
+### Crear Categoria con id padre
+POST {{baseUrl}}/categorias/
+Content-Type: {{json}}
+
+{
+  "nombre": "Hambuerguesas smash",
+  "descripcion": "Hamburguesas smasheadas de carne",
+  "imagen_url": "https://foodish-api.com/images/burger/burger3.jpg",
+  "parent_id": 1
+}
+
+### Listar todas las Categorias
+GET {{baseUrl}}/categorias/
+
+### Listar las Categorias con query
+GET {{baseUrl}}/categorias/?offset=0&limit=10
+
+### Listar todas las Categorias ordenadas por categoria padre
+GET {{baseUrl}}/categorias/tree
+
+### Detalle de una Categoria
+GET {{baseUrl}}/categorias/2
+
+### Actualizar una Categoria
+PATCH {{baseUrl}}/categorias/3
+Content-Type: {{json}}
+
+{
+  "nombre": "Hambuerguesas de pollo",
+  "descripcion": "Hamburguesas con carne de pollo",
+  "imagen_url": "https://foodish-api.com/images/burger/burger2.jpg",
   "parent_id": 1
 }
 
 ### Desactivar Categoria (Borrado logico)
-DELETE {{baseUrl}}/categorias/2
+DELETE {{baseUrl}}/categorias/3
 
 
 ### ==========================================
@@ -60,17 +84,48 @@ POST {{baseUrl}}/ingredientes/
 Content-Type: {{json}}
 
 {
-  "nombre": "carne",
+  "nombre": "Carne",
   "descripcion": "carne de vaca"
 }
 
-### Crear ingrediente 2
+### Crear ingrediente alergeno (no apto para celiacos)
 POST {{baseUrl}}/ingredientes/
 Content-Type: {{json}}
 
 {
-  "nombre": "pan",
-  "descripcion": "pan de papa"
+  "nombre": "Pan",
+  "descripcion": "pan de papa",
+  "es_alergeno": true
+}
+
+### Crear ingrediente no alergeno
+POST {{baseUrl}}/ingredientes/
+Content-Type: {{json}}
+
+{
+  "nombre": "Pepinillo",
+  "descripcion": "pepinos agrios",
+  "es_alergeno": false
+}
+
+### Crear ingrediente no alergeno 2
+POST {{baseUrl}}/ingredientes/
+Content-Type: {{json}}
+
+{
+  "nombre": "Salsa",
+  "descripcion": "Salsa de tomate",
+  "es_alergeno": false
+}
+
+### Crear ingrediente no alergeno 3
+POST {{baseUrl}}/ingredientes/
+Content-Type: {{json}}
+
+{
+  "nombre": "Queso",
+  "descripcion": "Queso cremoso",
+  "es_alergeno": false
 }
 
 ### Listar ingredientes
@@ -79,7 +134,7 @@ GET {{baseUrl}}/ingredientes/
 ### Listar ingredientes query
 GET {{baseUrl}}/ingredientes/?offset=0&limit=10&nombre=pan
 
-### Detalle de ingrediente exitoso
+### Detalle de ingrediente
 GET {{baseUrl}}/ingredientes/1
 
 ### Actualizar ingrediente
@@ -87,7 +142,7 @@ PATCH {{baseUrl}}/ingredientes/2
 Content-Type: {{json}}
 
 {
-  "nombre": "pan con moras",
+  "nombre": "Pan con moras",
   "descripcion": "pan de papa con moras",
   "es_alergeno": true
 }
@@ -104,22 +159,70 @@ POST {{baseUrl}}/productos/
 Content-Type: {{json}}
 
 {
-  "nombre": "Silla Ergonómica 2",
-  "descripcion": "Silla de tipo ergonomica economica",
+  "nombre": "Hamburguesa simple BIG",
+  "unidad_medida_id":5,
+  "descripcion": "Hamburguesa con queso, tomate, lechuga, cebolla y pepinillos",
   "precio_base": 250.00,
   "imagenes_url":[
-  "https://imagen-ejemplo1.jpg",
-  "https://imagen-ejemplo2.jpg",
-  "https://imagen-ejemplo3.jpg"],
-  "stock_cantidad":3,
+  "https://foodish-api.com/images/burger/burger5.jpg",
+  "https://foodish-api.com/images/burger/burger4.jpg"],
+  "stock_cantidad":10,
   "disponible": true,
   "categorias":[
     {"id":1,
       "es_principal":false
+    },
+    {"id":3,
+      "es_principal":true
     }
   ],
   "ingredientes":[
     {"id":1,
+      "cantidad":150,
+      "unidad_medida_id": 2,
+      "es_removible":false
+    },
+    {"id":2,
+      "cantidad":1,
+      "unidad_medida_id": 5,
+      "es_removible":false
+    },
+    {"id":3,
+      "cantidad":2,
+      "unidad_medida_id": 5,
+      "es_removible":true
+    }
+
+  ]
+}
+
+### Crear Producto
+POST {{baseUrl}}/productos/
+Content-Type: {{json}}
+
+{
+  "nombre": "Pizza muzza",
+  "unidad_medida_id":5,
+  "descripcion": "Pizza muzzarela, queso y salsa",
+  "precio_base": 100.00,
+  "imagenes_url":[
+  "https://foodish-api.com/images/pizza/pizza1.jpg"],
+  "stock_cantidad":10,
+  "disponible": true,
+  "categorias":[
+    {"id":2,
+      "es_principal":true
+    }
+  ],
+  "ingredientes":[
+    {"id":4,
+      "cantidad":250,
+      "unidad_medida_id": 4,
+      "es_removible":false
+    },
+    {"id":5,
+      "cantidad":200,
+      "unidad_medida_id": 2,
       "es_removible":true
     }
 
@@ -127,74 +230,104 @@ Content-Type: {{json}}
 }
 
 ### Listar Productos
+GET {{baseUrl}}/productos/
+
+### Listar Productos, solo 5 en este caso
 GET {{baseUrl}}/productos/?offset=0&limit=5
 
-### Detalle Producto Exitoso
-GET {{baseUrl}}/productos/5
+### Detalle Producto
+GET {{baseUrl}}/productos/1
 
 ### Actualizar Producto
 PATCH {{baseUrl}}/productos/2
 Content-Type: {{json}}
 
 {
-  "nombre": "Silla Ergonómica Premium",
-  "descripcion": "Silla de tipo ergonomica de mejor calidad",
-  "precio_base": 299.99,
+  "nombre": "Hamburguesa simple BIG",
+  "unidad_medida_id":5,
+  "descripcion": "Hamburguesa con queso, tomate y lechuga",
+  "precio_base": 250.00,
   "imagenes_url":[
-  "https://imagen-ejemplo6.jpg",
-  "https://imagen-ejemplo5.jpg",
-  "https://imagen-ejemplo4.jpg"],
-  "stock_cantidad":3,
-  "disponible": false,
+  "https://foodish-api.com/images/burger/burger6.jpg",
+  "https://foodish-api.com/images/burger/burger4.jpg"],
+  "stock_cantidad":10,
+  "disponible": true,
   "categorias":[
     {"id":1,
       "es_principal":false
+    },
+    {"id":3,
+      "es_principal":true
     }
   ],
   "ingredientes":[
     {"id":1,
-      "es_removible":true
+      "cantidad":150,
+      "unidad_medida_id": 2,
+      "es_removible":false
+    },
+    {"id":2,
+      "cantidad":1,
+      "unidad_medida_id": 5,
+      "es_removible":false
     }
-
   ]
 }
 
 
 ### Desactivar Producto
-DELETE {{baseUrl}}/productos/5
+DELETE {{baseUrl}}/productos/1
 
-### Detalle Producto Inexistente
-GET {{baseUrl}}/productos/99
+### ==========================================
+### MÓDULO: PEDIDO
+### ==========================================
 
-### Pedido
+### Crear un Pedido
 POST {{baseUrl}}/pedidos/
 Content-Type: {{json}}
 
 {
   "forma_pago_codigo": "EFECTIVO",
-  "subtotal": 123,
-  "descuento": 1,
-  "costo_envio": 1,
-  "total": 123,
-  "notas": "string",
+  "descuento": 10,
+  "costo_envio": 50,
+  "notas": "PONEME SERVILLETAS PORFAVOR",
   "detalle_pedidos": [
      {
       "producto_id": 1,
       "cantidad": 2,
-      "personalizacion":[1]
+      "personalizacion":[3]
+     },
+     {
+      "producto_id": 2,
+      "cantidad": 2,
+      "personalizacion":[]
      }
     ]
 }
 
-### get pedidos
+### Obtener Pedidos
 GET {{baseUrl}}/pedidos
 
-### actualizar estado
-PATCH {{baseUrl}}/pedidos/2
+### Obtener un Pedido
+GET {{baseUrl}}/pedidos/1
+
+### Avanzar Estado
+PATCH {{baseUrl}}/pedidos/1
 Content-Type: {{json}}
 
 {
   "estado_bool": true,
-  "notas": "",
+  "motivo": ""
+}
+
+### Cancelar Estado
+PATCH {{baseUrl}}/pedidos/1
+Content-Type: {{json}}
+
+{
+  "estado_bool": false,
   "motivo": "PORQUE SI"
 }
+
+### Eliminnar Pedido
+DELETE {{baseUrl}}/pedidos/1
