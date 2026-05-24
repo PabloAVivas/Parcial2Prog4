@@ -184,7 +184,7 @@ class UsuarioService:
             
             if direccion.usuario_id != usuario_id:
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZEDm,
+                    status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="No tienes los permisos para acceder a esta funcionalidad"
                 )
 
