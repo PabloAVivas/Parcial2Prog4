@@ -30,6 +30,10 @@ class CategoriaRepository(BaseRepository[Categoria]):
         )
         return self.session.exec(query).first()
 
+    def get_by_nombre(self, categoria_nombre: str) -> Categoria:
+        query = select(Categoria).where(Categoria.nombre == categoria_nombre)
+        return self.session.exec(query).first()
+
     def count(self) -> int:
         query = select(func.count()).select_from(Categoria).where(Categoria.activo == True)
         return self.session.exec(query).one()

@@ -30,6 +30,10 @@ class IngredienteRepository(BaseRepository[Ingrediente]):
         )
         return self.session.exec(query).first()
 
+    def get_by_nombre(self, Ingrediente_nombre: str) -> Ingrediente:
+        query = select(Ingrediente).where(Ingrediente.nombre == Ingrediente_nombre)
+        return self.session.exec(query).first()
+
     def count(self) -> int:
         query = select(func.count()).select_from(Ingrediente).where(Ingrediente.activo == True)
         return self.session.exec(query).one()

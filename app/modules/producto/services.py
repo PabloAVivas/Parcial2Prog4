@@ -1,9 +1,9 @@
 from typing import Optional
 from fastapi import HTTPException, status
 from sqlmodel import Session
-from sqlalchemy.orm import selectinload
-from app.modules.producto.models import Producto, ProductoCategoriaLink, ProductoIngredienteLink
+from app.modules.producto.models import Producto
 from app.modules.producto.schemas import ProductoCreate, ProductoUpdate, ProductoRead, ProductoPaginadoResponse, CategoriaBasicRead, IngredienteBasicRead, UnidadMedidaRead
+from app.modules.usuarios.schemas import RolRead
 from datetime import datetime, timezone
 from app.modules.producto.unit_of_work import ProductoUnitOfWork
 
@@ -123,61 +123,67 @@ class ProductoService:
             producto = self._get_or_404(uow, producto_id)
             return self._map_to_read(producto)
 
-    def actualizar(self, producto_id: int, data: ProductoUpdate) -> ProductoRead:
+    def actualizar(self, producto_id: int, data: ProductoUpdate, usuario_rol: list[RolRead]) -> ProductoRead:
         with ProductoUnitOfWork(self._session) as uow:
             producto = self._get_or_404(uow, producto_id)
-            if not data.categorias or not data.ingredientes:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Solo se puede crear un producto si tiene al menos una categoría y un ingrediente"
-                )
-            
-            unidad = uow.producto.get_unidad(data.unidad_medida_id)
-            if not unidad:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Unidad de medida con id={data.unidad_medida_id} no encontrado",
-                )
-            
-            patch = data.model_dump(exclude_unset=True, exclude={"categorias", "ingredientes"})
+            if "ADMIN" in [rol.codigo for rol in usuario_rol]:
+                unidad = uow.producto.get_unidad(data.unidad_medida_id)
+                if not unidad:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Unidad de medida con id={data.unidad_medida_id} no encontrado",
+                    )
+                
+                patch = data.model_dump(exclude_unset=True, exclude={"categorias", "ingredientes"})
 
-            for field, value in patch.items():
-                setattr(producto, field, value)
+                for field, value in patch.items():
+                    setattr(producto, field, value)
 
-            uow.producto.add(producto)
+                uow.producto.add(producto)
 
-            principales = [c for c in data.categorias if c.es_principal]
-            if len(principales) > 1:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Solo puede haber una categoría principal por producto",
-                )
-            if data.categorias is not None:
-                uow.producto.eliminar_categoria(producto.id)
-                for cat_input in data.categorias:
-                    cat = uow.categoria.get_by_id(cat_input.id)
-                    if not cat:
-                        raise HTTPException(
-                            status_code=404,
-                            detail=f"Categoría {cat_input.id} no encontrada",
-                        )
-                    uow.producto.add_categoria(producto.id, cat_input.id, cat_input.es_principal)
+                principales = [c for c in data.categorias if c.es_principal]
+                if len(principales) > 1:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Solo puede haber una categoría principal por producto",
+                    )
+                if data.categorias is not None:
+                    uow.producto.eliminar_categoria(producto.id)
+                    for cat_input in data.categorias:
+                        cat = uow.categoria.get_by_id(cat_input.id)
+                        if not cat:
+                            raise HTTPException(
+                                status_code=404,
+                                detail=f"Categoría {cat_input.id} no encontrada",
+                            )
+                        uow.producto.add_categoria(producto.id, cat_input.id, cat_input.es_principal)
 
-            if data.ingredientes is not None:
-                uow.producto.eliminar_ingrediente(producto.id)
-                for ing_input in data.ingredientes:
-                    ing = uow.ingrediente.get_by_id(ing_input.id)
-                    if not ing:
-                        raise HTTPException(
-                            status_code=404,
-                            detail=f"Ingrediente {ing_input.id} no encontrado",
-                        )
-                    uow.producto.add_ingrediente(producto.id, ing_input.id, ing_input.cantidad, ing_input.unidad_medida_id, ing_input.es_removible)
+                if data.ingredientes is not None:
+                    uow.producto.eliminar_ingrediente(producto.id)
+                    for ing_input in data.ingredientes:
+                        ing = uow.ingrediente.get_by_id(ing_input.id)
+                        if not ing:
+                            raise HTTPException(
+                                status_code=404,
+                                detail=f"Ingrediente {ing_input.id} no encontrado",
+                            )
+                        uow.producto.add_ingrediente(producto.id, ing_input.id, ing_input.cantidad, ing_input.unidad_medida_id, ing_input.es_removible)
 
-            uow.flush()
-            producto_actualizado = uow.producto.get_by_id_categorias_ingredientes(producto.id)
+                uow.flush()
+                producto_actualizado = uow.producto.get_by_id_categorias_ingredientes(producto.id)
+                return self._map_to_read(producto_actualizado)
 
-            return self._map_to_read(producto_actualizado)
+
+            elif "STOCK" in [rol.codigo for rol in usuario_rol]:
+                producto.stock_cantidad = data.stock_cantidad
+                producto.disponible = data.disponible
+                uow.producto.add(producto)
+                uow.flush()
+                producto_actualizado = uow.producto.get_by_id_categorias_ingredientes(producto.id)
+                return self._map_to_read(producto_actualizado)
+
+
+        
 
     def borrado_logico(self, producto_id: int) -> None:
         with ProductoUnitOfWork(self._session) as uow:

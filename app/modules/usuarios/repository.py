@@ -1,5 +1,5 @@
 from turtle import update
-
+from sqlalchemy.orm import selectinload
 from app.core.repository import BaseRepository
 from app.modules.usuarios.models import Usuario, Rol, RefreshToken, UsuarioRol, DireccionEntrega
 from sqlmodel import Session, select, func, delete, update
@@ -8,8 +8,36 @@ class UsuarioRepository(BaseRepository[Usuario]):
     def __init__(self, session: Session) -> None:
         super().__init__(session, Usuario)
 
-    def get_by_email(self, email: str) -> Usuario | None:
+    def get_activo(self, offset: int = 0, limit: int = 100) -> list[Usuario]:
+        statement = select(Usuario).where(Usuario.activo == True)
+        
+        statement = statement.options(
+            selectinload(Usuario.roles),
+            selectinload(Usuario.direcciones)
+        )
+            
+        statement = statement.order_by(Usuario.id)
+        
+        return list(
+            self.session.exec(statement.offset(offset).limit(limit)).all()
+        )
+
+    def get_by_id_usuario(self, usuario_id: int) -> Usuario:
+        statement = select(Usuario).where(Usuario.id == usuario_id).options(
+            selectinload(Usuario.roles),
+            selectinload(Usuario.direcciones)
+        )
+
+        return self.session.exec(statement).first()
+
+    def get_by_email(self, email: str) -> Usuario:
         statement = select(Usuario).where(Usuario.email == email)
+
+        statement = statement.options(
+            selectinload(Usuario.roles),
+            selectinload(Usuario.direcciones)
+        )
+
         return self.session.exec(statement).first()
     
 class RolRepository(BaseRepository[Rol]):

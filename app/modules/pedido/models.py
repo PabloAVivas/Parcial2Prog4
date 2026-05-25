@@ -5,7 +5,8 @@ from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime, timezone
 
 if TYPE_CHECKING:
-    from app.modules.producto.models import Producto
+    from app.modules.usuarios.models import Usuario
+    from app.modules.usuarios.models import DireccionEntrega
 
 
 
@@ -81,6 +82,22 @@ class Pedido(SQLModel, table=True):
     __tablename__ = "pedido"
 
     id:Optional[int] = Field(default=None, primary_key=True)
+
+    usuario_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("usuario.id"),
+            nullable=False
+        )
+    )
+    direccion_id: int = Field(
+        default=None,
+        sa_column=Column(
+            Integer,
+            ForeignKey("direccion_entrega.id"),
+            nullable=True
+        )
+    )
     estado_codigo: str = Field(
         sa_column=Column(
             String(20),
@@ -103,6 +120,8 @@ class Pedido(SQLModel, table=True):
     notas: str
     activo: bool = Field(nullable=False, default=True)
 
+    usuario: "Usuario" = Relationship()
+    direccion: "DireccionEntrega" = Relationship()
     detalle_pedidos: List["DetallePedido"] = Relationship()
     historial_estado: List["HistorialEstadoPedido"] = Relationship()
     
@@ -147,6 +166,14 @@ class HistorialEstadoPedido(SQLModel, table=True):
             String(20),
             ForeignKey("estado_pedido.codigo"),
             nullable=False
+        )
+    )
+    usuario_id: int = Field(
+        default= None,
+        sa_column=Column(
+            Integer,
+            ForeignKey("usuario.id"),
+            nullable=True
         )
     )
 

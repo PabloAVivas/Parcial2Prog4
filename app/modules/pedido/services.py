@@ -2,9 +2,9 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlmodel import Session
 from datetime import datetime, timezone
-from sqlalchemy.orm import selectinload
 from app.modules.pedido.models import Pedido, HistorialEstadoPedido, EstadoPedido, FormaPago, DetallePedido
 from app.modules.producto.models import Producto
+from app.modules.usuarios.models import Usuario
 from app.modules.pedido.schemas import PedidoCreate, PedidoRead, PedidoHistorialUpdate, DetallePedidoCreate, DetallePedidoRead, HistorialEstadoPedidoRead
 from app.modules.pedido.unit_of_work import PedidoUnitOfWork
 
@@ -47,14 +47,41 @@ class PedidoService:
                 detail=f"Producto con el id {producto_id} no encontrado",
             )
         return producto
+    
+    def _get_usuario_or_404(self, uow:PedidoUnitOfWork, usuario_id: int) -> Usuario:
+        usuario = uow.usuario.get_by_id_usuario(usuario_id)
+        if not usuario:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Usuario con el id {usuario_id} no encontrado",
+            )
+        return usuario
 
     def subtotal_producto(self, precio:float, cantidad:int) -> float:
         subtotal = precio * cantidad
         return subtotal
 
-    def crear(self, data: PedidoCreate) -> PedidoRead:
+    def crear(self, data: PedidoCreate, usuario_actual_id: int) -> PedidoRead:
         with PedidoUnitOfWork(self._session) as uow:
-            
+            usuario = uow.usuario.get_by_id(usuario_actual_id)
+            if not usuario:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Usuario con el id {usuario_actual_id} no encontrado",
+                )
+            if data.direccion_id is not None:
+                direccion = uow.direccion_entrega.get_by_id(data.direccion_id)
+                if not direccion:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Direccion con el id {data.direccion_id} no encontrado",
+                    )
+                if direccion.usuario_id != usuario_actual_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="No tienes los permisos para realizar esta accion"
+                    )
+
             if not data.detalle_pedidos:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -72,6 +99,8 @@ class PedidoService:
             total = subtotal_pedido - data.descuento + data.costo_envio
 
             pedido = Pedido(
+                usuario_id= usuario.id,
+                direccion_id= data.direccion_id,
                 estado_codigo=estado,
                 forma_pago_codigo=data.forma_pago_codigo.upper(),
                 subtotal=subtotal_pedido,
@@ -112,7 +141,6 @@ class PedidoService:
             )
             uow.historial_estado_pedido.add(historial)
             
-
             uow.flush()
             pedido_creado = uow.pedido.get_by_id_pedido(pedido.id)
 
@@ -126,26 +154,59 @@ class PedidoService:
             result = [PedidoRead.model_validate(p) for p in pedidos]
         return result
         
-    def obtener_por_id(self, pedido_id: int) -> PedidoRead:
+    def obtener_por_id(self, pedido_id: int, usuario_actual_id: int) -> PedidoRead:
         with PedidoUnitOfWork(self._session) as uow:
+            usuario = self._get_usuario_or_404(uow, usuario_actual_id)
+            roles = [rol.codigo for rol in usuario.roles]
             pedido = self._get_or_404(uow, pedido_id)
+            if pedido.usuario_id != usuario_actual_id and ("ADMIN" not in roles and "PEDIDOS" not in roles):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="No tienes los permisos para acceder a esta funcionalidad"
+                )
             result = PedidoRead.model_validate(pedido)
         return result
+    
+    def obtener_pedidos_por_usuario(self, usuario_id: int, usuario_actual_id: int) -> list[PedidoRead]:
+        with PedidoUnitOfWork(self._session) as uow:
+            usuario = self._get_usuario_or_404(uow, usuario_actual_id)
+            roles = [rol.codigo for rol in usuario.roles]
+            if usuario.id != usuario_id and "ADMIN" not in roles:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="No tienes los permisos para acceder a esta funcionalidad"
+                )
+            pedidos = uow.pedido.get_pedidos_by_usuario_id(usuario_id)
+            result = [PedidoRead.model_validate(p) for p in pedidos]
+        return result
         
-    def actualizar(self, pedido_id: int, data: PedidoHistorialUpdate) -> PedidoRead:
+    def actualizar(self, pedido_id: int, data: PedidoHistorialUpdate, usuario_actual_id: int) -> PedidoRead:
         with PedidoUnitOfWork(self._session) as uow:
 
             pedido = self._get_or_404(uow, pedido_id)
+            usuario = self._get_usuario_or_404(uow, usuario_actual_id)
+            roles = [rol.codigo for rol in usuario.roles]
+
+            if pedido.usuario_id != usuario_actual_id and ("ADMIN" not in roles and "PEDIDOS" not in roles):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="No tienes los permisos para acceder a esta funcionalidad"
+                )
+
             estado = self._get_estado_or_404(uow, pedido.estado_codigo)
             nuevo_estado = None
             if not data.estado_bool:
-                if estado.orden >=4:
+                if estado.orden >=4 or ("ADMIN" not in roles and "PEDIDOS" not in roles and estado.orden >=3):
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"No se puede cancelar un pedido en estado: {pedido.estado_codigo}",
                     )
                 nuevo_estado = "CANCELADO"
-            elif data.estado_bool:
+                for depe in pedido.detalle_pedidos:
+                    producto = self._get_producto_or_404(uow, depe.producto_id)
+                    producto.stock_cantidad += depe.cantidad
+
+            elif data.estado_bool and ("ADMIN" in roles or "PEDIDOS" in roles):
                 match pedido.estado_codigo:
                     case "PENDIENTE":
                         nuevo_estado = "CONFIRMADO"
@@ -160,7 +221,12 @@ class PedidoService:
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"No se puede avanzar un pedido que ya esta en estado: {pedido.estado_codigo}",
                     )
-
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="No tienes los permisos para acceder a esta funcionalidad"
+                )
+            
             historial = HistorialEstadoPedido(
                 pedido_id= pedido.id,
                 estado_desde= pedido.estado_codigo,

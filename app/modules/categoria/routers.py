@@ -2,7 +2,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status, Query, Path
 from sqlmodel import Session
 from app.core.database import get_session
+from app.core.deps import require_role
 from app.modules.categoria.schemas import CategoriaCreate, CategoriaRead, CategoriaUpdate, CategoriaPaginadaResponse, CategoriaTree
+from app.modules.usuarios.schemas import UsuarioRead
 from app.modules.categoria.services import CategoriaService
 
 router = APIRouter()
@@ -12,7 +14,7 @@ def get_categoria_service(session: Session = Depends(get_session)) -> CategoriaS
 SeDe = Annotated[CategoriaService, Depends(get_categoria_service)]
 
 @router.post("/", response_model=CategoriaRead, status_code=status.HTTP_201_CREATED, summary="Crear una Categoria")
-def alta_categoria(categoria: CategoriaCreate, session: SeDe) -> CategoriaRead:
+def alta_categoria(admin: Annotated[UsuarioRead, Depends(require_role(["ADMIN"]))], categoria: CategoriaCreate, session: SeDe) -> CategoriaRead:
     return session.crear(categoria)
 
 @router.get("/", response_model= CategoriaPaginadaResponse, summary="Obtener categorias paginados")
@@ -28,9 +30,9 @@ def detalle_categoria(session: SeDe, categoria_id: int = Path(gt=0) ) -> Categor
     return session.obtener_por_id(categoria_id)
 
 @router.patch("/{categoria_id}", response_model=CategoriaRead, summary="Actualizar un categoria con sus relaciones")
-def actualizar_categoria(datos: CategoriaUpdate, session: SeDe, categoria_id: int = Path(gt=0) ) -> CategoriaRead:
+def actualizar_categoria(admin: Annotated[UsuarioRead, Depends(require_role(["ADMIN"]))], datos: CategoriaUpdate, session: SeDe, categoria_id: int = Path(gt=0) ) -> CategoriaRead:
     return session.actualizar(categoria_id, datos)
 
 @router.delete("/{categoria_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Borrado logico de un categoria")
-def eliminar_categoria(session: SeDe, categoria_id: int = Path(gt=0) ) -> None:
+def eliminar_categoria(admin: Annotated[UsuarioRead, Depends(require_role(["ADMIN"]))], session: SeDe, categoria_id: int = Path(gt=0) ) -> None:
     session.borrado_logico(categoria_id)

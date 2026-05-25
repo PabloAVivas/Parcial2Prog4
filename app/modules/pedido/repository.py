@@ -13,7 +13,9 @@ class PedidoRepository(BaseRepository[Pedido]):
         
         query = query.options(
             selectinload(Pedido.detalle_pedidos),
-            selectinload(Pedido.historial_estado)
+            selectinload(Pedido.historial_estado),
+            selectinload(Pedido.usuario),
+            selectinload(Pedido.direccion)
         )
             
         query = query.order_by(Pedido.id)
@@ -25,7 +27,9 @@ class PedidoRepository(BaseRepository[Pedido]):
     def get_by_id_pedido(self, pedido_id: int) -> Pedido:
         query = select(Pedido).where(Pedido.id == pedido_id).options(
             selectinload(Pedido.detalle_pedidos),
-            selectinload(Pedido.historial_estado)
+            selectinload(Pedido.historial_estado),
+            selectinload(Pedido.usuario),
+            selectinload(Pedido.direccion)
         )
         return self.session.exec(query).first()
 
@@ -34,6 +38,17 @@ class PedidoRepository(BaseRepository[Pedido]):
     
     def get_forma(self, codigo:str) -> FormaPago:
         return self.session.get(FormaPago, codigo.upper())
+    
+    def get_pedidos_by_usuario_id(self, usuario_id: int) -> list[Pedido]:
+        query = select(Pedido).where(Pedido.usuario_id == usuario_id)
+        query = query.options(
+            selectinload(Pedido.detalle_pedidos),
+            selectinload(Pedido.historial_estado),
+            selectinload(Pedido.usuario),
+            selectinload(Pedido.direccion)
+        )
+        query = query.order_by(Pedido.id)
+        return self.session.exec(query).all()
 
 class DetallePedidoRepository:
     def __init__(self, session: Session) -> None:
