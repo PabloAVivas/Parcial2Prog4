@@ -1,9 +1,7 @@
 from typing import Optional
 from fastapi import HTTPException, status
 from sqlmodel import Session
-from sqlalchemy.orm import selectinload
 from app.modules.categoria.models import Categoria
-from app.modules.producto.models import ProductoCategoriaLink
 from app.modules.categoria.schemas import CategoriaCreate, CategoriaUpdate, CategoriaRead, CategoriaPaginadaResponse, CategoriaTree
 from datetime import datetime, timezone
 from app.modules.categoria.unit_of_work import CategoriaUnitOfWork
@@ -56,6 +54,13 @@ class CategoriaService:
         with CategoriaUnitOfWork(self._session) as uow:
             if data.parent_id is not None:
                 self._get_or_404(uow, data.parent_id)
+            cate = uow.categoria.get_by_nombre(data.nombre)
+            if cate is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Categoria ya existe",
+                )
+
             categoria = Categoria(**data.model_dump())
             uow.categoria.add(categoria)
 
@@ -84,7 +89,12 @@ class CategoriaService:
             categoria = self._get_or_404(uow, categoria_id)
 
             if data.parent_id is not None:
-                self._get_or_404(uow, data.parent_id)
+                padre= self._get_or_404(uow, data.parent_id)
+                if padre.id == categoria.id:
+                    raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"No podes poner un padre id igual al id de la Categoria que queres actualizar",
+                )
 
             patch = data.model_dump(exclude_unset=True)
 

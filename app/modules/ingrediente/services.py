@@ -2,8 +2,6 @@ from typing import Optional
 from sqlmodel import Session
 from fastapi import HTTPException, status
 from app.modules.ingrediente.models import Ingrediente
-from sqlalchemy.orm import selectinload
-from app.modules.producto.models import  ProductoIngredienteLink
 from app.modules.ingrediente.schemas import IngredienteCreate, IngredienteUpdate, IngredienteRead, IngredientePaginadoResponse
 from app.modules.ingrediente.unit_of_work import IngredienteUnitOfWork
 
@@ -22,6 +20,12 @@ class IngredienteService:
 
     def crear(self, data: IngredienteCreate) -> IngredienteRead:
         with IngredienteUnitOfWork(self._session) as uow:
+            ingre = uow.ingrediente.get_by_nombre(data.nombre)
+            if ingre is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Ingrediente ya existe",
+                )
             ingrediente = Ingrediente(**data.model_dump())
             uow.ingrediente.add(ingrediente)
 

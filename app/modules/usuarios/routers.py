@@ -20,11 +20,11 @@ SeDe = Annotated[UsuarioService, Depends(get_usuario_service)]
 def registrar(usuario: UsuarioRegister, session: SeDe) -> UsuarioRead:
     return session.registrar_usuario(usuario)
 
-@router.post("/login", response_model=Token, status_code=status.HTTP_200_OK, summary="Login de usuario")
+@router.post("/login", response_model=TokenRead, status_code=status.HTTP_200_OK, summary="Login de usuario")
 def iniciar_sesion(
     usuario_data: UsuarioLogin,
     service: SeDe,
-    response: Response) -> Token:
+    response: Response) -> TokenRead:
     token = service.login_usuario(usuario_data)
 
     response.set_cookie(
@@ -143,14 +143,14 @@ def eliminar_direccion(
     session: SeDe,
     usuario_actual: Annotated[UsuarioRead, Depends(get_current_active_user)],
     direccion_id: int = Path(gt=0)) -> None:
-    return session.eliminar_direccion_entrega(direccion_id, usuario_actual.id)
+    session.eliminar_direccion_entrega(direccion_id, usuario_actual.id)
 
 @router.delete("/{usuario_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Desactivar un usuario")
 def desactivar(
     session: SeDe, 
     admin: Annotated[UsuarioRead, Depends(require_role(["ADMIN"]))],
     usuario_id: int = Path(gt=0)):
-        return session.desactivar_usuario(usuario_id)
+    session.desactivar_usuario(usuario_id)
 
 
 

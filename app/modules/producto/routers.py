@@ -2,7 +2,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, status, Path
 from sqlmodel import Session
 from app.core.database import get_session
+from app.core.deps import require_role
 from app.modules.producto.schemas import ProductoCreate, ProductoRead, ProductoUpdate, ProductoPaginadoResponse
+from app.modules.usuarios.schemas import UsuarioRead
 from app.modules.producto.services import ProductoService
 
 router = APIRouter()
@@ -12,7 +14,7 @@ def get_producto_service(session: Session = Depends(get_session)) -> ProductoSer
 SeDe = Annotated[ProductoService, Depends(get_producto_service)]
 
 @router.post("/", response_model=ProductoRead, status_code=status.HTTP_201_CREATED, summary="Crear un Producto con sus relaciones")
-def alta_producto(producto: ProductoCreate, session: SeDe) -> ProductoRead:
+def alta_producto(admin: Annotated[UsuarioRead, Depends(require_role(["ADMIN"]))], producto: ProductoCreate, session: SeDe) -> ProductoRead:
     return session.crear(producto)
 
 @router.get("/", response_model= ProductoPaginadoResponse, summary="Obtener productos paginados")
@@ -24,9 +26,9 @@ def detalle_producto(session: SeDe, producto_id: int = Path(gt=0) ) -> ProductoR
     return session.obtener_por_id(producto_id)
 
 @router.patch("/{producto_id}", response_model=ProductoRead, summary="Actualizar un producto con sus relaciones")
-def actualizar_producto(datos: ProductoUpdate, session: SeDe, producto_id: int = Path(gt=0) ) -> ProductoRead:
-    return session.actualizar(producto_id, datos)
+def actualizar_producto(usuario_actual: Annotated[UsuarioRead, Depends(require_role(["ADMIN", "STOCK"]))], datos: ProductoUpdate, session: SeDe, producto_id: int = Path(gt=0) ) -> ProductoRead:
+    return session.actualizar(producto_id, datos, usuario_actual.roles)
 
 @router.delete("/{producto_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Borrado logico de un producto")
-def eliminar_producto(session: SeDe, producto_id: int = Path(gt=0) ) -> None:
+def eliminar_producto(admin: Annotated[UsuarioRead, Depends(require_role(["ADMIN"]))], session: SeDe, producto_id: int = Path(gt=0) ) -> None:
     session.borrado_logico(producto_id)

@@ -2,7 +2,9 @@ from typing import Optional, TYPE_CHECKING, List
 from sqlalchemy import Column, Numeric
 from sqlmodel import Field, Relationship, SQLModel, DateTime
 from datetime import datetime, timedelta, timezone
-## TENEMOS QUE IMPORTAR EL MODELO DE ROL PARA LA RELACION
+
+if TYPE_CHECKING:
+    from app.modules.pedido.models import Pedido
 
 class UsuarioRol(SQLModel, table=True):
     __tablename__ = 'usuario_rol'

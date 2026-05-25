@@ -4,17 +4,17 @@ from datetime import datetime
 
 class DireccionEntregaRead(SQLModel):
     id: int
-    alias: str
+    alias: Optional[str] = None
     linea1: str
-    linea2: str
+    linea2: Optional[str] = None
     ciudad: str
     provincia: str
     es_principal: bool
     created_at: datetime
     updated_at: datetime
+    deleted_at: Optional[datetime] = None
 
 class DireccionEntregaCreate(SQLModel):
-    usuario_id: int
     alias: Optional[str] = None
     linea1: str
     linea2: Optional[str] = None
@@ -26,7 +26,6 @@ class DireccionEntregaCreate(SQLModel):
     es_principal: bool = False
 
 class DireccionEntregaUpdate(SQLModel):
-    usuario_id: int
     alias: Optional[str] = None
     linea1: Optional[str] = None
     linea2: Optional[str] = None
@@ -68,7 +67,7 @@ class UsuarioRead(SQLModel):
     celular: str
     direcciones: List[DireccionEntregaRead] = []
     activo: bool
-    roles: list[RolRead]
+    roles: List[RolRead] = []
 
 class Token(SQLModel):
     access_token: str
