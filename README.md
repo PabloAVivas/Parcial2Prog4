@@ -458,6 +458,17 @@ app/
   POSTGRES_HOST= localhost
   POSTGRES_PORT= 5432
   DATABASE_URL=postgresql://postgres:{contaseña de postgres}@localhost:5432/parcial_v2
+
+```
+
+## Inicializacion del proyecto
+```
+  .../Parcial2Prog4 --> python -m venv .venv
+  .../Parcial2Prog4 --> .venv/Scripts/Activate/ps1
+  .../Parcial2Prog4 --> cd app
+  .../Parcial2Prog4 --> pip install -r requirements.txt
+  .../Parcial2Prog4 --> fastapi dev app/main.py
+
 ```
 
 ## METODOS DE PAGO - UNIDADES DE MEDIDA - ROLES - ESTADOS DE PEDIDO  -> No tienen endpoints, tienen que pasarlos directamente desde el front
