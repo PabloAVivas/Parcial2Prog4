@@ -68,10 +68,10 @@ class CategoriaService:
 
         return result
 
-    def obtener_todas(self, offset: int = 0, limit: int = 100, nombre: Optional[str] = None) -> CategoriaPaginadaResponse:
+    def obtener_todas(self, offset: int = 0, limit: int = 100, nombre: Optional[str] = None, parent_id: Optional[int] = None) -> CategoriaPaginadaResponse:
         with CategoriaUnitOfWork(self._session) as uow:
-            categorias = uow.categoria.get_activo(offset=offset, limit=limit, nombre=nombre)
-            total = uow.categoria.count_activo(nombre=nombre)
+            categorias = uow.categoria.get_activo(offset=offset, limit=limit, nombre=nombre, parent_id=parent_id)
+            total = uow.categoria.count_activo(nombre=nombre, parent_id=parent_id)
 
             return CategoriaPaginadaResponse(
                 total=total,
@@ -102,7 +102,7 @@ class CategoriaService:
                 setattr(categoria, field, value)
 
             uow.categoria.add(categoria)
-            uow.flush
+            uow.flush()
             
             categoria_actualizada = uow.categoria.get_by_id_productos(categoria.id)
 
@@ -113,6 +113,14 @@ class CategoriaService:
     def borrado_logico(self, categoria_id: int) -> None:
         with CategoriaUnitOfWork(self._session) as uow:
             categoria = self._get_or_404(uow, categoria_id)
+
+            productos_activos = [p for p in categoria.productos if p.activo]
+            if productos_activos:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"No se puede eliminar la categoría porque tiene {len(productos_activos)} producto(s) activo(s)"
+                )
+
             categoria.activo = False
             categoria.deleted_at = datetime.now(timezone.utc)
             uow.categoria.add(categoria)

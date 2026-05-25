@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query, status, Path
 from sqlmodel import Session
 from app.core.database import get_session
 from app.core.deps import require_role
-from app.modules.producto.schemas import ProductoCreate, ProductoRead, ProductoUpdate, ProductoPaginadoResponse
+from app.modules.producto.schemas import ProductoCreate, ProductoRead, ProductoUpdate, ProductoPaginadoResponse, ProductoDisponibilidadUpdate
 from app.modules.usuarios.schemas import UsuarioRead
 from app.modules.producto.services import ProductoService
 
@@ -18,8 +18,8 @@ def alta_producto(admin: Annotated[UsuarioRead, Depends(require_role(["ADMIN"]))
     return session.crear(producto)
 
 @router.get("/", response_model= ProductoPaginadoResponse, summary="Obtener productos paginados")
-def listar_productos(offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100), nombre: str = Query(default=None) , session: ProductoService = Depends(get_producto_service)) -> ProductoPaginadoResponse:
-    return session.obtener_todos(offset=offset, limit=limit, nombre=nombre)
+def listar_productos(offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100), nombre: str = Query(default=None), categoria_id: int | None = Query(default=None), disponible: bool | None = Query(default=None), session: ProductoService = Depends(get_producto_service)) -> ProductoPaginadoResponse:
+    return session.obtener_todos(offset=offset, limit=limit, nombre=nombre, categoria_id=categoria_id, disponible=disponible)
 
 @router.get("/{producto_id}", response_model=ProductoRead, summary="Obtener un producto por id")
 def detalle_producto(session: SeDe, producto_id: int = Path(gt=0) ) -> ProductoRead:
@@ -28,6 +28,15 @@ def detalle_producto(session: SeDe, producto_id: int = Path(gt=0) ) -> ProductoR
 @router.patch("/{producto_id}", response_model=ProductoRead, summary="Actualizar un producto con sus relaciones")
 def actualizar_producto(usuario_actual: Annotated[UsuarioRead, Depends(require_role(["ADMIN", "STOCK"]))], datos: ProductoUpdate, session: SeDe, producto_id: int = Path(gt=0) ) -> ProductoRead:
     return session.actualizar(producto_id, datos, usuario_actual.roles)
+
+@router.patch("/{producto_id}/disponibilidad", response_model=ProductoRead, summary="Activar/desactivar disponibilidad de un producto")
+def cambiar_disponibilidad(
+    usuario_actual: Annotated[UsuarioRead, Depends(require_role(["ADMIN", "STOCK"]))],
+    data: ProductoDisponibilidadUpdate,
+    session: SeDe,
+    producto_id: int = Path(gt=0)
+) -> ProductoRead:
+    return session.actualizar_disponibilidad(producto_id, data)
 
 @router.delete("/{producto_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Borrado logico de un producto")
 def eliminar_producto(admin: Annotated[UsuarioRead, Depends(require_role(["ADMIN"]))], session: SeDe, producto_id: int = Path(gt=0) ) -> None:

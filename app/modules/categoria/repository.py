@@ -8,7 +8,7 @@ class CategoriaRepository(BaseRepository[Categoria]):
     def __init__(self, session: Session) -> None:
         super().__init__(session, Categoria)
 
-    def get_activo(self, offset: int = 0, limit: int = 100, nombre: str = None) -> list[Categoria]:
+    def get_activo(self, offset: int = 0, limit: int = 100, nombre: str = None, parent_id: int | None = None) -> list[Categoria]:
         query = select(Categoria).where(Categoria.activo == True)
 
         query = query.options(
@@ -18,6 +18,8 @@ class CategoriaRepository(BaseRepository[Categoria]):
 
         if nombre:
             query = query.where(Categoria.nombre.ilike(f"%{nombre}%"))
+        if parent_id is not None:
+            query = query.where(Categoria.parent_id == parent_id)
         query = query.order_by(Categoria.id)
         return list(
             self.session.exec(query.offset(offset).limit(limit)).all()
@@ -38,10 +40,12 @@ class CategoriaRepository(BaseRepository[Categoria]):
         query = select(func.count()).select_from(Categoria).where(Categoria.activo == True)
         return self.session.exec(query).one()
     
-    def count_activo(self, nombre: str = None) -> int:
+    def count_activo(self, nombre: str = None, parent_id: int | None = None) -> int:
         query = select(func.count()).select_from(Categoria).where(Categoria.activo == True)
         if nombre:
             query = query.where(Categoria.nombre.ilike(f"%{nombre}%"))
+        if parent_id is not None:
+            query = query.where(Categoria.parent_id == parent_id)
         
         return self.session.exec(query).one()
     

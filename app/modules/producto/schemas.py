@@ -71,6 +71,9 @@ class ProductoUpdate(SQLModel):
     categorias: Optional[List[CategoriaBasicCreate]] = None
     ingredientes: Optional[List[IngredienteBasicCreate]] = None
 
+class ProductoDisponibilidadUpdate(SQLModel):
+    disponible: bool
+
 class ProductoPaginadoResponse(SQLModel):
     total: int
     data: List[ProductoRead]

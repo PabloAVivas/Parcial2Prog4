@@ -2,7 +2,7 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlmodel import Session
 from app.modules.producto.models import Producto
-from app.modules.producto.schemas import ProductoCreate, ProductoUpdate, ProductoRead, ProductoPaginadoResponse, CategoriaBasicRead, IngredienteBasicRead, UnidadMedidaRead
+from app.modules.producto.schemas import ProductoCreate, ProductoUpdate, ProductoRead, ProductoPaginadoResponse, ProductoDisponibilidadUpdate, CategoriaBasicRead, IngredienteBasicRead, UnidadMedidaRead
 from app.modules.usuarios.schemas import RolRead
 from datetime import datetime, timezone
 from app.modules.producto.unit_of_work import ProductoUnitOfWork
@@ -108,10 +108,10 @@ class ProductoService:
 
             return self._map_to_read(producto_creado)
 
-    def obtener_todos(self, offset: int = 0, limit: int = 100, nombre: Optional[str] = None) -> ProductoPaginadoResponse:
+    def obtener_todos(self, offset: int = 0, limit: int = 100, nombre: Optional[str] = None, categoria_id: Optional[int] = None, disponible: Optional[bool] = None) -> ProductoPaginadoResponse:
         with ProductoUnitOfWork(self._session) as uow:
-            productos = uow.producto.get_activo(offset=offset, limit=limit, nombre=nombre)
-            total = uow.producto.count_activo(nombre=nombre)
+            productos = uow.producto.get_activo(offset=offset, limit=limit, nombre=nombre, categoria_id=categoria_id, disponible=disponible)
+            total = uow.producto.count_activo(nombre=nombre, categoria_id=categoria_id, disponible=disponible)
 
             return ProductoPaginadoResponse(
                 total=total,
@@ -184,6 +184,15 @@ class ProductoService:
 
 
         
+
+    def actualizar_disponibilidad(self, producto_id: int, data: ProductoDisponibilidadUpdate) -> ProductoRead:
+        with ProductoUnitOfWork(self._session) as uow:
+            producto = self._get_or_404(uow, producto_id)
+            producto.disponible = data.disponible
+            uow.producto.add(producto)
+            uow.flush()
+            producto_actualizado = uow.producto.get_by_id_categorias_ingredientes(producto.id)
+            return self._map_to_read(producto_actualizado)
 
     def borrado_logico(self, producto_id: int) -> None:
         with ProductoUnitOfWork(self._session) as uow:

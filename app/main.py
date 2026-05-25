@@ -10,6 +10,9 @@ from app.modules.categoria.routers import router as categoria_router
 from app.modules.ingrediente.routers import router as ingrediente_router
 from app.modules.pedido.routers import router as pedido_router
 from app.modules.usuarios.routers import router as usuario_router
+from app.modules.auth.routers import router as auth_router
+from app.modules.direcciones.routers import router as direcciones_router
+from app.modules.admin.routers import router as admin_router
 
 app = FastAPI()
 
@@ -37,8 +40,11 @@ allow_methods=['*'],
 allow_headers=['*'],
 )
 
-app.include_router(producto_router, prefix="/productos", tags=["producto"])
-app.include_router(categoria_router, prefix="/categorias", tags=["categoria"])
-app.include_router(ingrediente_router, prefix="/ingredientes", tags=["ingrediente"])
-app.include_router(pedido_router, prefix="/pedidos", tags=["pedido"])
-app.include_router(usuario_router, prefix="/usuarios", tags=["Usuarios"])
+app.include_router(producto_router, prefix="/api/v1/productos", tags=["producto"])
+app.include_router(categoria_router, prefix="/api/v1/categorias", tags=["categoria"])
+app.include_router(ingrediente_router, prefix="/api/v1/ingredientes", tags=["ingrediente"])
+app.include_router(pedido_router, prefix="/api/v1/pedidos", tags=["pedido"])
+app.include_router(usuario_router, prefix="/api/v1/usuarios", tags=["Usuarios"])
+app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(direcciones_router, prefix="/api/v1/direcciones", tags=["direcciones"])
+app.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
