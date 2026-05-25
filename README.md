@@ -461,8 +461,10 @@ app/
 ```
 
 ## METODOS DE PAGO - UNIDADES DE MEDIDA - ROLES - ESTADOS DE PEDIDO  -> No tienen endpoints, tienen que pasarlos directamente desde el front
+```
 * Roles
 <img width="560" height="142" alt="image" src="https://github.com/user-attachments/assets/4b77a836-fe1a-499c-8099-fba9c6a6ec2c" />
+````
 * Unidades de medida
 <img width="725" height="216" alt="image" src="https://github.com/user-attachments/assets/a4b0d2aa-f7be-45ea-9d85-4ce62cb6609e" />
 * Metodos de pago
