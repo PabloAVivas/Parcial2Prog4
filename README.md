@@ -139,6 +139,36 @@ CategoriaTree:
   subcategorias: list[CategoriaTree]
 ```
 
+## Ingredientes
+```
+IngredienteCreate:
+  nombre: str
+  descripcion: str
+  es_alergeno: Optional[bool] = False
+```
+```
+IngredienteRead:
+  id: int
+  nombre: str
+  descripcion: str
+  es_alergeno: bool
+  activo: bool
+  created_at: datetime
+  updated_at: datetime
+  producto_links: Optional[List[ProductoBasicRead]]
+```
+```
+IngredienteUpdate:
+  nombre: Optional[str]
+  descripcion: Optional[str]
+  es_alergeno: Optional[bool]
+```
+```
+IngredientePaginadoResponse:
+  total: int
+  data: list[IngredienteRead]
+```
+
 ## Productos
 ```
 UnidadMedidaRead:
@@ -331,6 +361,20 @@ PedidoHistorialUpdate:
 | `DELETE` | `/{categoria_id}` | — | `204 No Content` | ✅ ADMIN |
 
 **Query params GET `/`:** `?offset=0&limit=20&nombre=&parent_id=`
+
+---
+
+## Ingredientes — `/api/v1/ingredientes/`
+
+| Método | Ruta | Body | Respuesta | Auth |
+|--------|------|------|-----------|------|
+| `POST` | `/` | `IngredienteCreate` | `IngredienteRead` | ✅ ADMIN |
+| `GET` | `/` | — | `IngredientePaginadoResponse` | ✅ ADMIN |
+| `GET` | `/{ingrediente_id}` | — | `IngredienteRead` | ✅ ADMIN |
+| `PATCH` | `/{ingrediente_id}` | `IngredienteUpdate` | `IngredienteRead` | ✅ ADMIN |
+| `DELETE` | `/{ingrediente_id}` | — | `204 No Content` | ✅ ADMIN |
+
+**Query params GET `/`:** `?offset=0&limit=20&nombre=`
 
 ---
 

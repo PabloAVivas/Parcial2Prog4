@@ -26,7 +26,7 @@ class IngredienteRead(SQLModel):
     activo: bool
     created_at: datetime
     updated_at: datetime
-    producto_links: List[ProductoBasicRead] = []
+    producto_links: Optional[List[ProductoBasicRead]] = []
 
 class IngredientePaginadoResponse(SQLModel):
     total: int

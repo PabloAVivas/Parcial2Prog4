@@ -64,7 +64,7 @@ class PedidoRead(SQLModel):
     historial_estado: List[HistorialEstadoPedidoRead] = []
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime
+    deleted_at: Optional[datetime] = None
 
 class PedidoHistorialUpdate(SQLModel):
     estado_bool: bool
