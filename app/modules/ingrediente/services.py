@@ -31,7 +31,7 @@ class IngredienteService:
 
             result = IngredienteRead.model_validate(ingrediente)
 
-        return result
+            return result
 
     def obtener_todos(self, offset: int = 0, limit: int = 100, nombre: Optional[str] = None) -> IngredientePaginadoResponse:
         with IngredienteUnitOfWork(self._session) as uow:
