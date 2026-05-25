@@ -462,15 +462,14 @@ app/
 ```
 
 ## Inicializacion del proyecto
+
 ```
   .../Parcial2Prog4 --> python -m venv .venv
   .../Parcial2Prog4 --> .venv/Scripts/Activate/ps1
-  .../Parcial2Prog4 --> cd app
   .../Parcial2Prog4 --> pip install -r requirements.txt
   .../Parcial2Prog4 --> fastapi dev app/main.py
 
 ```
-
 ## METODOS DE PAGO - UNIDADES DE MEDIDA - ROLES - ESTADOS DE PEDIDO  -> No tienen endpoints, tienen que pasarlos directamente desde el front
 * Roles
 <img width="560" height="142" alt="image" src="https://github.com/user-attachments/assets/4b77a836-fe1a-499c-8099-fba9c6a6ec2c" />
