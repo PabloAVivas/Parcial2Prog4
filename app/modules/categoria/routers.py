@@ -18,8 +18,8 @@ def alta_categoria(admin: Annotated[UsuarioRead, Depends(require_role(["ADMIN"])
     return session.crear(categoria)
 
 @router.get("/", response_model= CategoriaPaginadaResponse, summary="Obtener categorias paginados")
-def listar_categorias(offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100), nombre: str = Query(default=None) , session: CategoriaService = Depends(get_categoria_service)) -> CategoriaPaginadaResponse:
-    return session.obtener_todas(offset=offset, limit=limit, nombre=nombre)
+def listar_categorias(offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100), nombre: str = Query(default=None), parent_id: int | None = Query(default=None), session: CategoriaService = Depends(get_categoria_service)) -> CategoriaPaginadaResponse:
+    return session.obtener_todas(offset=offset, limit=limit, nombre=nombre, parent_id=parent_id)
 
 @router.get("/tree", response_model=list[CategoriaTree])
 def get_categorias_tree(session: CategoriaService = Depends(get_categoria_service)):

@@ -9,7 +9,7 @@ from app.modules.usuarios.unit_of_work import UsuarioUnitOfWork
 from app.modules.usuarios.models import Usuario
 from app.modules.usuarios.schemas import UsuarioRead
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="usuarios/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 def get_usuario_uow(session: Session = Depends(get_session)) -> UsuarioUnitOfWork:
     return UsuarioUnitOfWork(session)

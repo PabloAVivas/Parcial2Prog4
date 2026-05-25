@@ -36,17 +36,6 @@ class DireccionEntregaUpdate(SQLModel):
     longitud: Optional[float] = None
     es_principal: Optional[bool] = None
 
-class UsuarioLogin(SQLModel):
-    email: str
-    password: str
-
-class UsuarioRegister(SQLModel):
-    nombre: str
-    apellido: str
-    celular: str
-    email: str
-    password: str
-
 class UsuarioUpdate(SQLModel):
     nombre: Optional[str] = None
     apellido: Optional[str] = None
@@ -69,16 +58,9 @@ class UsuarioRead(SQLModel):
     activo: bool
     roles: List[RolRead] = []
 
-class Token(SQLModel):
-    access_token: str
-    refresh_token: Optional[str] = None
-    token_type: str
-    expires_in: datetime
-
-class TokenRead(SQLModel):
-    access_token: str
-    token_type: str
-    expires_in: datetime
+class UsuarioPaginadoResponse(SQLModel):
+    total: int
+    data: list[UsuarioRead]
 
 class AdministrarRol(SQLModel):
     usuario_id: int

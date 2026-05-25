@@ -1,4 +1,4 @@
-from turtle import update
+from typing import Optional
 from sqlalchemy.orm import selectinload
 from app.core.repository import BaseRepository
 from app.modules.usuarios.models import Usuario, Rol, RefreshToken, UsuarioRol, DireccionEntrega
@@ -21,6 +21,31 @@ class UsuarioRepository(BaseRepository[Usuario]):
         return list(
             self.session.exec(statement.offset(offset).limit(limit)).all()
         )
+
+    def get_activo_paginado(self, offset: int = 0, limit: int = 100, rol_codigo: Optional[str] = None) -> list[Usuario]:
+        statement = select(Usuario).where(Usuario.activo == True)
+
+        if rol_codigo:
+            statement = statement.where(Usuario.roles.any(Rol.codigo == rol_codigo.upper()))
+
+        statement = statement.options(
+            selectinload(Usuario.roles),
+            selectinload(Usuario.direcciones)
+        )
+
+        statement = statement.order_by(Usuario.id)
+
+        return list(
+            self.session.exec(statement.offset(offset).limit(limit)).all()
+        )
+
+    def count_activo(self, rol_codigo: Optional[str] = None) -> int:
+        statement = select(func.count(Usuario.id)).where(Usuario.activo == True)
+
+        if rol_codigo:
+            statement = statement.where(Usuario.roles.any(Rol.codigo == rol_codigo.upper()))
+
+        return self.session.exec(statement).one()
 
     def get_by_id_usuario(self, usuario_id: int) -> Usuario:
         statement = select(Usuario).where(Usuario.id == usuario_id).options(
@@ -54,7 +79,7 @@ class RefreshTokenRepository(BaseRepository[RefreshToken]):
 
     def get_by_usuario(self, usuario_id: int) -> None:
         statement = select(RefreshToken).where(RefreshToken.usuario_id == usuario_id)
-        return self.session.exce(statement).first()
+        return self.session.exec(statement).first()
     
     def get_active_by_usuario(self, usuario_id: int) -> None:
         statement = select(RefreshToken).where(RefreshToken.usuario_id == usuario_id, RefreshToken.revoked_at.is_(None))
