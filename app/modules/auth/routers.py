@@ -1,6 +1,7 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, status, Response, Request, HTTPException
 from sqlmodel import Session
+from app.core.rate_limit import limiter
 from app.core.database import get_session
 from app.core.deps import get_current_active_user
 from app.modules.auth.schemas import UsuarioRegister, UsuarioLogin, TokenRead
@@ -15,10 +16,12 @@ def get_auth_service(session: Session = Depends(get_session)) -> AuthService:
 SeDe = Annotated[AuthService, Depends(get_auth_service)]
 
 @router.post("/register", response_model=UsuarioRead, status_code=status.HTTP_201_CREATED, summary="Registrar un nuevo usuario")
+@limiter.limit("5/15minutes")
 def registrar(usuario: UsuarioRegister, session: SeDe) -> UsuarioRead:
     return session.registrar_usuario(usuario)
 
 @router.post("/login", response_model=TokenRead, status_code=status.HTTP_200_OK, summary="Login de usuario")
+@limiter.limit("5/15minutes")
 def iniciar_sesion(
     usuario_data: UsuarioLogin,
     service: SeDe,
@@ -39,6 +42,7 @@ def iniciar_sesion(
         expires_in = 1800)
     
 @router.patch("/refresh", response_model=TokenRead, status_code=status.HTTP_200_OK, summary="Refresh de access token")
+@limiter.limit("5/15minutes")
 def refrescar_token(request: Request, service: SeDe) -> TokenRead:
     refresh_cookie = request.cookies.get("refresh_token")
 

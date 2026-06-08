@@ -13,7 +13,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 def hashear_password(password: str) -> str:
     password_bytes = password.encode('utf-8')
 
-    salt = bcrypt.gensalt()
+    salt = bcrypt.gensalt(rounds=12)
     password_hash_bytes = bcrypt.hashpw(password_bytes, salt)
 
     return password_hash_bytes.decode('utf-8')
@@ -47,13 +47,25 @@ def decode_access_token(token: str) -> dict | None:
         return payload
     except JWTError as e:
         return None
+
+def decode_refresh_token(token: str) -> dict | None:
+    try:
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM]
+        )
+
+        if payload.get("type") != "refresh":
+            return None
+        
+        return payload
+    except JWTError as e:
+        return None
     
-def generar_refresh_token() -> tuple[str, str]:
-    token_puro = secrets.token_hex(64)
+def crear_refresh_token(data: dict) -> str:
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(days=7)
+    to_encode.update({"type" : "refresh", "exp" : expire})
 
-    token_hash = hashlib.sha256(token_puro.encode()).hexdigest()
-
-    return token_puro, token_hash
-
-def calcular_hash_token(token_puro: str) -> str:
-    return hashlib.sha256(token_puro.encode()).hexdigest()
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)

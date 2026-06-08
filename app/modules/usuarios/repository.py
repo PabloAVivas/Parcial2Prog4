@@ -73,22 +73,6 @@ class RolRepository(BaseRepository[Rol]):
         statement = select(Rol).where(Rol.codigo == codigo.upper())
         return self.session.exec(statement).first()
 
-class RefreshTokenRepository(BaseRepository[RefreshToken]):
-    def __init__(self, session: Session) -> None:
-        super().__init__(session, RefreshToken)
-
-    def get_by_usuario(self, usuario_id: int) -> None:
-        statement = select(RefreshToken).where(RefreshToken.usuario_id == usuario_id)
-        return self.session.exec(statement).first()
-    
-    def get_active_by_usuario(self, usuario_id: int) -> None:
-        statement = select(RefreshToken).where(RefreshToken.usuario_id == usuario_id, RefreshToken.revoked_at.is_(None))
-        return self.session.exec(statement).all()
-    
-    def get_by_hash(self, refresh_hash: str) -> RefreshToken:
-        statement = select(RefreshToken).where(RefreshToken.token_hash == refresh_hash)
-        return self.session.exec(statement).first()
-
 class UsuarioRolRepository(BaseRepository[UsuarioRol]):
     def __init__(self, session: Session) -> None:
         super().__init__(session, UsuarioRol)

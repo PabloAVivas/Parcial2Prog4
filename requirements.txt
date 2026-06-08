@@ -5,6 +5,7 @@ typing
 sqlmodel
 psycopg2
 passlib
+slowapi>=0.1.9
 jose
 bcrypt==4.2.0
 python-jose[cryptography]==3.3.0

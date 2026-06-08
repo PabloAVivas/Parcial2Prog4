@@ -12,28 +12,6 @@ def get_usuario_service(session: Session = Depends(get_session)) -> UsuarioServi
 
 SeDe = Annotated[UsuarioService, Depends(get_usuario_service)]
 
-@router.get("/", response_model=list[UsuarioRead], status_code=status.HTTP_200_OK, summary="Obtener todos los usuarios")
-def obtener_lista_usuarios(
-    admin: Annotated[UsuarioRead, Depends(require_role(["ADMIN"]))],
-    service: SeDe
-) -> list[UsuarioRead]:
-    
-    return service.obtener_usuarios()
-
-@router.patch("/asignar", status_code=status.HTTP_200_OK, summary="Asignar un rol a un usuario")
-def administrar_roles(
-    session: SeDe, 
-    admin: Annotated[UsuarioRead, Depends(require_role(["ADMIN"]))],
-    informacion: AdministrarRol) -> UsuarioRead:
-    return session.asignar_rol(admin.id, informacion)
-
-@router.patch("/remover", status_code=status.HTTP_200_OK, summary="Remover un rol a un usuario")
-def remover_rol(
-    session: SeDe, 
-    admin: Annotated[UsuarioRead, Depends(require_role(["ADMIN"]))],
-    informacion: AdministrarRol) -> None:
-    return session.quitar_rol(informacion)
-
 @router.get("/{usuario_id}", response_model= UsuarioRead, status_code=status.HTTP_200_OK, summary="Obtener un usuario por ID")
 def obtener_usuario(
     session:SeDe,
@@ -51,13 +29,6 @@ def actualizar(
 
     return session.actualizar_usuario(usuario_id, usuario_data, usuario_actual.id)
 
-
-@router.delete("/{usuario_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Desactivar un usuario")
-def desactivar(
-    session: SeDe, 
-    admin: Annotated[UsuarioRead, Depends(require_role(["ADMIN"]))],
-    usuario_id: int = Path(gt=0)):
-    session.desactivar_usuario(usuario_id)
 
 
 
