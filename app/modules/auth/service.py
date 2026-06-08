@@ -1,7 +1,7 @@
 from datetime import timedelta, timezone, datetime
 from sqlmodel import Session
 from fastapi import HTTPException, status
-from app.core.security import generar_refresh_token, hashear_password, verificar_password, create_access_token, calcular_hash_token
+from app.core.security import crear_refresh_token, hashear_password, verificar_password, create_access_token, decode_refresh_token
 from app.modules.usuarios.unit_of_work import UsuarioUnitOfWork
 from app.modules.usuarios.models import Usuario, RefreshToken, Rol
 from app.modules.usuarios.schemas import UsuarioRead
@@ -43,56 +43,20 @@ class AuthService:
             
             roles_codigos = [rol.codigo for rol in usuario.roles]
             access_token = create_access_token(data={"sub": str(usuario.id), "role":roles_codigos})
-
-            refresh_puro, refresh_hash = generar_refresh_token()
-
-            nuevo_refresh_db = RefreshToken(
-                usuario_id = usuario.id,
-                token_hash = refresh_hash,
-                expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-            )
-
-            uow.refresh_token.add(nuevo_refresh_db)
+            refresh_token = crear_refresh_token(data={"sub": str(usuario.id), "role":roles_codigos})
 
             return Token(
                 access_token = access_token,
-                refresh_token = refresh_puro,
-                token_type = "bearer",
-                expires_in = nuevo_refresh_db.expires_at
+                refresh_token = refresh_token,
+                token_type = "bearer"
             )
         
-    def refrescar_access_token(self, refresh_puro: str) -> str:
-
-        refresh_has = calcular_hash_token(refresh_puro)
+    def refrescar_access_token(self, refresh_token: str) -> str:
 
         with UsuarioUnitOfWork(self._session) as uow:
-
-            db_token = uow.refresh_token.get_by_hash(refresh_has)
-
-            if not db_token:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Refresh Token invalido"
-                )
             
-            if db_token.revoked_at is not None:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Refresh Token revocado"
-                )
-            
-            if db_token.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Refresh Token expirado"
-                )
-            
-            usuario = uow.usuario.get_by_id(db_token.usuario_id)
-            if not usuario or not usuario.activo:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Usuario no encontrado o inactivo"
-                )
+            payload = decode_refresh_token(refresh_token)
+            usuario = uow.usuario.get_by_id_usuario(int(payload.get("sub")))
             
             roles_codigos = [rol.codigo for rol in usuario.roles]
             nuevo_access_token = create_access_token(data={"sub" : str(usuario.id), "role" : roles_codigos})

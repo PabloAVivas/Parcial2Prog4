@@ -4,7 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import create_db_and_tables
 from app.db.seed import seed_all
-
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from app.core.rate_limit import limiter
 from app.modules.producto.routers import router as producto_router
 from app.modules.categoria.routers import router as categoria_router
 from app.modules.ingrediente.routers import router as ingrediente_router
@@ -32,10 +34,14 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
-    
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 app.add_middleware(
 CORSMiddleware,
 allow_origins=['http://localhost:5173'],
+allow_credentials=True,
 allow_methods=['*'],
 allow_headers=['*'],
 )

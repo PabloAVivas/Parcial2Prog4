@@ -36,18 +36,6 @@ class Usuario(SQLModel, table=True):
             "primaryjoin" : "Usuario.id == UsuarioRol.usuario_id",
             "secondaryjoin": "Rol.codigo == UsuarioRol.rol_codigo"
         })
-    tokens: List["RefreshToken"] = Relationship()
-
-class RefreshToken(SQLModel, table=True):
-    __tablename__ = 'refresh_token'
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-    usuario_id: int = Field(foreign_key="usuario.id", nullable=False)
-    token_hash: str = Field(max_length=64, nullable=False, unique=True)
-    expires_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc) + timedelta(days=7)))
-    revoked_at: Optional[datetime] = Field(sa_column=Column(DateTime(timezone=True), nullable=True, default=None))
-    created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)))
-    usuario: Usuario = Relationship(back_populates="tokens")
 
 class DireccionEntrega(SQLModel, table=True):
     __tablename__ = 'direccion_entrega'
