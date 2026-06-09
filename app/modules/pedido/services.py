@@ -4,6 +4,7 @@ from sqlmodel import Session
 from datetime import datetime, timezone
 from app.modules.pedido.models import Pedido, HistorialEstadoPedido, EstadoPedido, FormaPago, DetallePedido
 from app.modules.producto.models import Producto
+from app.modules.ingrediente.models import Ingrediente
 from app.modules.usuarios.models import Usuario
 from app.modules.pedido.schemas import PedidoCreate, PedidoRead, PedidoHistorialUpdate, DetallePedidoCreate, DetallePedidoRead, HistorialEstadoPedidoRead
 from app.modules.pedido.unit_of_work import PedidoUnitOfWork
@@ -40,13 +41,22 @@ class PedidoService:
         return forma_pago
     
     def _get_producto_or_404(self, uow:PedidoUnitOfWork, producto_id: int) -> Producto:
-        producto = uow.producto.get_by_id(producto_id)
+        producto = uow.producto.get_by_id_categorias_ingredientes(producto_id)
         if not producto:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Producto con el id {producto_id} no encontrado",
             )
         return producto
+    
+    def _get_ingrediente_or_404(self, uow:PedidoUnitOfWork, ingrediente_id: int) -> Ingrediente:
+        ingrediente = uow.ingrediente.get_by_id(ingrediente_id)
+        if not ingrediente:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Ingrediente con el id {ingrediente_id} no encontrado",
+            )
+        return ingrediente
     
     def _get_usuario_or_404(self, uow:PedidoUnitOfWork, usuario_id: int) -> Usuario:
         usuario = uow.usuario.get_by_id_usuario(usuario_id)
@@ -121,6 +131,17 @@ class PedidoService:
                         detail=f"No hay stock suficiente en Producto {producto.nombre}",
                     )
                 
+                if producto.ingredientes is not None:
+                    for ingrediente_producto in producto.ingredientes:
+                        ingrediente = self._get_ingrediente_or_404(uow, ingrediente_producto.id)
+                        cantidad_restar = producto.ingrediente_links.cantidad * depe_input.cantidad
+                        if cantidad_restar > ingrediente.stock_cantidad:
+                            raise HTTPException(
+                            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                            detail=f"No hay stock suficiente en Ingrediente {ingrediente.nombre}",
+                        )
+                        ingrediente.stock_cantidad -= cantidad_restar
+
                 producto.stock_cantidad -= depe_input.cantidad
                 subtotal = self.subtotal_producto(producto.precio_base, depe_input.cantidad)
 
@@ -205,6 +226,11 @@ class PedidoService:
                 for depe in pedido.detalle_pedidos:
                     producto = self._get_producto_or_404(uow, depe.producto_id)
                     producto.stock_cantidad += depe.cantidad
+                    if producto.ingredientes is not None:
+                        for ingrediente_producto in producto.ingredientes:
+                            ingrediente = self._get_ingrediente_or_404(uow, ingrediente_producto.id)
+                            cantidad_sumar = producto.ingrediente_links.cantidad * depe.cantidad
+                            ingrediente.stock_cantidad += cantidad_sumar
 
             elif data.estado_bool and ("ADMIN" in roles or "PEDIDOS" in roles):
                 match pedido.estado_codigo:
@@ -213,8 +239,6 @@ class PedidoService:
                     case "CONFIRMADO":
                         nuevo_estado = "EN_PREPARACION"
                     case "EN_PREPARACION":
-                        nuevo_estado = "EN_CAMINO"
-                    case "EN_CAMINO":
                         nuevo_estado = "ENTREGADO"
                     case "ENTREGADO" | "CANCELADO":
                         raise HTTPException(

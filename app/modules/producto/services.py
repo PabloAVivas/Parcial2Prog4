@@ -39,6 +39,7 @@ class ProductoService:
             IngredienteBasicRead(
                 id=link.ingrediente_id,
                 nombre=link.ingrediente.nombre,
+                stock_cantidad=link.ingrediente.stock_cantidad,
                 es_alergeno=link.ingrediente.es_alergeno,
                 cantidad= link.cantidad,
                 unidad_medida= link.unidad_medida,
@@ -71,10 +72,10 @@ class ProductoService:
                 stock_cantidad=data.stock_cantidad,
                 disponible=data.disponible,
             )
-            if not data.categorias or not data.ingredientes:
+            if not data.categorias:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Solo se puede crear un producto si tiene una categoria y un ingrediente minimo",
+                    detail="Solo se puede crear un producto si tiene por lo menos una categoria",
                 )
 
             uow.producto.add(producto)
