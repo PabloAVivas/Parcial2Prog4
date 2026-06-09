@@ -16,13 +16,15 @@ def get_auth_service(session: Session = Depends(get_session)) -> AuthService:
 SeDe = Annotated[AuthService, Depends(get_auth_service)]
 
 @router.post("/register", response_model=UsuarioRead, status_code=status.HTTP_201_CREATED, summary="Registrar un nuevo usuario")
+
 @limiter.limit("5/15minutes")
-def registrar(usuario: UsuarioRegister, session: SeDe) -> UsuarioRead:
+def registrar(request :Request, usuario: UsuarioRegister, session: SeDe) -> UsuarioRead:
     return session.registrar_usuario(usuario)
 
 @router.post("/login", response_model=TokenRead, status_code=status.HTTP_200_OK, summary="Login de usuario")
 @limiter.limit("5/15minutes")
 def iniciar_sesion(
+    request: Request,
     usuario_data: UsuarioLogin,
     service: SeDe,
     response: Response) -> TokenRead:

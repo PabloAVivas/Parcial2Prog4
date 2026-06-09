@@ -3,7 +3,7 @@ from sqlmodel import Session
 from fastapi import HTTPException, status
 from app.core.security import crear_refresh_token, hashear_password, verificar_password, create_access_token, decode_refresh_token
 from app.modules.usuarios.unit_of_work import UsuarioUnitOfWork
-from app.modules.usuarios.models import Usuario, RefreshToken, Rol
+from app.modules.usuarios.models import Usuario,  Rol
 from app.modules.usuarios.schemas import UsuarioRead
 from app.modules.auth.schemas import UsuarioRegister, UsuarioLogin, Token
 

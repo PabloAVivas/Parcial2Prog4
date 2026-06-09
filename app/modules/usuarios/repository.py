@@ -1,7 +1,7 @@
 from typing import Optional
 from sqlalchemy.orm import selectinload
 from app.core.repository import BaseRepository
-from app.modules.usuarios.models import Usuario, Rol, RefreshToken, UsuarioRol, DireccionEntrega
+from app.modules.usuarios.models import Usuario, Rol, UsuarioRol, DireccionEntrega
 from sqlmodel import Session, select, func, delete, update
 
 class UsuarioRepository(BaseRepository[Usuario]):
