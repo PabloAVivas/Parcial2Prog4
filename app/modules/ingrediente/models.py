@@ -14,7 +14,8 @@ class Ingrediente(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
     nombre: str = Field(index=True, unique=True, max_length=100)
-    descripcion: str
+    stock_cantidad: int = Field(ge=0, nullable=False, default=0)
+    descripcion: str = Field(nullable=True, default=None)
     es_alergeno: bool = Field(default=False)
     activo: bool = Field(nullable= False, default=True)
     created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)))

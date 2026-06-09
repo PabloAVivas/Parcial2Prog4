@@ -10,17 +10,20 @@ class ProductoBasicRead(SQLModel):
 
 class IngredienteCreate(SQLModel):
     nombre: str
-    descripcion: str
+    stock_cantidad: Optional[int] = 0
+    descripcion: Optional[str] = None
     es_alergeno: Optional[bool] = False
 
 class IngredienteUpdate(SQLModel):
     nombre: Optional[str] = None
+    stock_cantidad: Optional[int] = None
     descripcion: Optional[str] = None
     es_alergeno: Optional[bool] = None
 
 class IngredienteRead(SQLModel):
     id: int
     nombre: str
+    stock_cantidad: int
     descripcion: str
     es_alergeno: bool
     activo: bool
