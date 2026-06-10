@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, WebSocket, WebSocketException
 from sqlmodel import Session
 from fastapi.security import OAuth2PasswordBearer
 from app.core.config import settings
@@ -62,3 +62,26 @@ def require_role(allowed_roles: list[str]):
             )
         return current_user
     return role_checker
+
+async def get_current_user_ws(
+        websocket: WebSocket,
+        uow: Annotated[UsuarioUnitOfWork, Depends(get_usuario_uow)]
+):
+    token = websocket.cookies.get("access_token") 
+    
+    if not token:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason="Token faltante")
+
+    payload = decode_access_token(token)
+    if payload is None:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason="Token inválido")
+    
+    usuario_id: int | None = payload.get("sub")
+    if usuario_id is None:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason="Usuario no identificado")
+    
+    usuario = uow.usuario.get_by_id(int(usuario_id))
+    if usuario is None or not usuario.activo:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason="Usuario inactivo o no existe")
+        
+    return UsuarioRead.model_validate(usuario)
