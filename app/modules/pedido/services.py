@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 from fastapi import HTTPException, status
 from sqlmodel import Session
@@ -8,6 +9,24 @@ from app.modules.ingrediente.models import Ingrediente
 from app.modules.usuarios.models import Usuario
 from app.modules.pedido.schemas import PedidoCreate, PedidoRead, PedidoHistorialUpdate, DetallePedidoCreate, DetallePedidoRead, HistorialEstadoPedidoRead
 from app.modules.pedido.unit_of_work import PedidoUnitOfWork
+
+logger = logging.getLogger("app.modules.pedidos.service")
+
+EVENTOS_WS = {
+    "PEDIENTE":  "NUEVO_PEDIDO",
+    "CONFIRMADO": "PEDIDO_CONFIRMADO",
+    "EN_PREPARACION": "PEDIDO_EN_PREPARACION",
+    "ENTREGADO":  "PEDIDO_ENTREGADO",
+    "CANCELADO":  "PEDIDO_CANCELADO",
+}
+
+ROLES_POR_TRANSICION = {
+    "PEDIENTE":  ["PEDIDOS", "ADMIN"],
+    "CONFIRMADO": ["PEDIDOS", "ADMIN"],
+    "EN_PREPARACION": ["PEDIDOS", "ADMIN"],
+    "ENTREGADO":  ["PEDIDOS", "ADMIN"],
+    "CANCELADO":  ["PEDIDOS", "ADMIN"],
+}
 
 class PedidoService:
     def __init__(self, session: Session) -> None:
@@ -71,7 +90,8 @@ class PedidoService:
         subtotal = precio * cantidad
         return subtotal
 
-    def crear(self, data: PedidoCreate, usuario_actual_id: int) -> PedidoRead:
+    async def crear(self, data: PedidoCreate, usuario_actual_id: int) -> PedidoRead:
+        result: PedidoRead | None = None
         with PedidoUnitOfWork(self._session) as uow:
             usuario = uow.usuario.get_by_id(usuario_actual_id)
             if not usuario:
@@ -166,6 +186,8 @@ class PedidoService:
             pedido_creado = uow.pedido.get_by_id_pedido(pedido.id)
 
             result = PedidoRead.model_validate(pedido_creado)
+
+        await self._emit_ws_events(result.id, estado, result)
         return result
     
     def obtener_todos(self, offset: Optional[int] = 0, limit: Optional[int] = 100) -> list[PedidoRead]:
@@ -201,7 +223,9 @@ class PedidoService:
             result = [PedidoRead.model_validate(p) for p in pedidos]
         return result
         
-    def actualizar(self, pedido_id: int, data: PedidoHistorialUpdate, usuario_actual_id: int) -> PedidoRead:
+    async def actualizar(self, pedido_id: int, data: PedidoHistorialUpdate, usuario_actual_id: int) -> PedidoRead:
+        result: PedidoRead | None = None
+        nuevo_estado: str = ""
         with PedidoUnitOfWork(self._session) as uow:
 
             pedido = self._get_or_404(uow, pedido_id)
@@ -232,7 +256,7 @@ class PedidoService:
                             cantidad_sumar = producto.ingrediente_links.cantidad * depe.cantidad
                             ingrediente.stock_cantidad += cantidad_sumar
 
-            elif data.estado_bool and ("ADMIN" in roles or "PEDIDOS" in roles):
+            elif data.estado_bool and "ADMIN" in roles:
                 match pedido.estado_codigo:
                     case "PENDIENTE":
                         nuevo_estado = "CONFIRMADO"
@@ -244,6 +268,17 @@ class PedidoService:
                         raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"No se puede avanzar un pedido que ya esta en estado: {pedido.estado_codigo}",
+                    )
+            elif data.estado_bool and "PEDIDOS" in roles:
+                match pedido.estado_codigo:
+                    case "CONFIRMADO":
+                        nuevo_estado = "EN_PREPARACION"
+                    case "EN_PREPARACION":
+                        nuevo_estado = "ENTREGADO"
+                    case "PENDIENTE" | "ENTREGADO" | "CANCELADO":
+                        raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"No se puede avanzar un pedido que ya esta en estado: {pedido.estado_codigo} o no tienes los permisos suficientes",
                     )
             else:
                 raise HTTPException(
@@ -259,11 +294,19 @@ class PedidoService:
             )
             uow.historial_estado_pedido.add(historial)
 
+            logger.info(
+                f"AUDITORÍA FSM: Usuario {usuario.nombre} "
+                f"(ID: {usuario.id}, Rol: {usuario.roles}) "
+                f"avanzó pedido {pedido_id} de '{pedido.estado_codigo}' a '{nuevo_estado}'"
+            )
+
             pedido.estado_codigo = nuevo_estado
             uow.pedido.add(pedido)
             uow.flush()
             pedido_actualizado = uow.pedido.get_by_id_pedido(pedido.id)
             result = PedidoRead.model_validate(pedido_actualizado)
+        
+        await self._emit_ws_events(pedido_id, nuevo_estado, result)
         return result
 
     def borrado_logico(self, pedido_id: int) -> None:
@@ -272,3 +315,26 @@ class PedidoService:
             pedido.activo = False
             pedido.deleted_at = datetime.now(timezone.utc)
             uow.pedido.add(pedido)
+
+    def autorizacion_pedido(self, pedido_id: int, usuario_id: int) -> bool:
+        with PedidoUnitOfWork(self._session) as uow:
+            pedido = uow.pedido.get_by_id_pedido(pedido_id)
+            if not pedido or pedido.usuario_id != usuario_id:
+                return False
+            return True
+    
+    async def _emit_ws_events(self, pedido_id: int, destino: str, result: PedidoRead) -> None:
+        from app.core.websocket import manager
+        event_type = EVENTOS_WS.get(destino)
+        if not event_type:
+            return
+        data = result.model_dump()
+        await manager.broadcast_to_order(pedido_id, event_type, data)
+        roles_a_notificar = ROLES_POR_TRANSICION.get(destino, [])
+        if roles_a_notificar:
+            await manager.broadcast_to_roles(roles_a_notificar, event_type, data)
+
+        logger.info(
+            f"WS emitido: {event_type} | pedido={pedido_id} | "
+            f"roles={roles_a_notificar} | rooms_activas={manager.get_rooms_info()}"
+        )
