@@ -29,7 +29,16 @@ def iniciar_sesion(
     service: SeDe,
     response: Response) -> TokenRead:
     token = service.login_usuario(usuario_data)
-
+    
+    response.set_cookie(
+        key="access_token",
+        value=token.access_token,
+        httponly=True,
+        max_age=1800,
+        samesite="lax",
+        secure=False
+    )
+    
     response.set_cookie(
         key="refresh_token",
         value=token.refresh_token,
