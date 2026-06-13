@@ -15,6 +15,7 @@ from app.modules.usuarios.routers import router as usuario_router
 from app.modules.auth.routers import router as auth_router
 from app.modules.direcciones.routers import router as direcciones_router
 from app.modules.admin.routers import router as admin_router
+from app.modules.images.routers import router as imagen_router
 
 app = FastAPI()
 
@@ -54,3 +55,4 @@ app.include_router(usuario_router, prefix="/api/v1/usuarios", tags=["Usuarios"])
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(direcciones_router, prefix="/api/v1/direcciones", tags=["direcciones"])
 app.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
+app.include_router(imagen_router, prefix="/api/v1/imagenes", tags=["imagenes"])
