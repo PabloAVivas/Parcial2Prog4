@@ -31,11 +31,6 @@ class IngredienteBasicRead(SQLModel):
     unidad_medida: UnidadMedidaRead
     es_removible: bool
 
-class UnidadMedidaRead(SQLModel):
-    nombre: str
-    simbolo: str
-    tipo: str
-
 class ProductoCreate(SQLModel):
     nombre: str
     unidad_medida_id: Optional[int] = None
