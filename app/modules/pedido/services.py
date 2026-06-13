@@ -13,7 +13,7 @@ from app.modules.pedido.unit_of_work import PedidoUnitOfWork
 logger = logging.getLogger("app.modules.pedidos.service")
 
 EVENTOS_WS = {
-    "PEDIENTE":  "NUEVO_PEDIDO",
+    "PENDIENTE":  "NUEVO_PEDIDO",
     "CONFIRMADO": "PEDIDO_CONFIRMADO",
     "EN_PREPARACION": "PEDIDO_EN_PREPARACION",
     "ENTREGADO":  "PEDIDO_ENTREGADO",
@@ -21,7 +21,7 @@ EVENTOS_WS = {
 }
 
 ROLES_POR_TRANSICION = {
-    "PEDIENTE":  ["PEDIDOS", "ADMIN"],
+    "PENDIENTE":  ["PEDIDOS", "ADMIN"],
     "CONFIRMADO": ["PEDIDOS", "ADMIN"],
     "EN_PREPARACION": ["PEDIDOS", "ADMIN"],
     "ENTREGADO":  ["PEDIDOS", "ADMIN"],
@@ -296,7 +296,7 @@ class PedidoService:
 
             logger.info(
                 f"AUDITORÍA FSM: Usuario {usuario.nombre} "
-                f"(ID: {usuario.id}, Rol: {usuario.roles}) "
+                f"(ID: {usuario.id}, Rol: {[role.codigo for role in usuario.roles]}) "
                 f"avanzó pedido {pedido_id} de '{pedido.estado_codigo}' a '{nuevo_estado}'"
             )
 

@@ -21,13 +21,13 @@ class Pago(SQLModel, table=True):
         )
     )
 
-    mp_payment_id: int = Field(unique=True, nullable=True)
-    mp_status: str = Field(sa_column=Column(String(30),nullable=False))
-    mp_status_detail: str = Field(sa_column=Column(String(100),nullable=False))
+    mp_payment_id: int = Field(unique=True, nullable=True, default= None, sa_type=BigInteger)
+    mp_status: str = Field(sa_column=Column(String(30),nullable=True), default= None)
+    mp_status_detail: str = Field(sa_column=Column(String(100),nullable=True), default= None)
     external_reference: str = Field(sa_column=Column(String(100),unique=True, nullable=False))
     idempotency_key: str = Field(sa_column=Column(String(100),unique=True, nullable=False))
     transaction_amount: float = Field(max_digits=10, decimal_places=2, nullable=False)
-    payment_method_id: str = Field(sa_column=Column(String(50)))
+    payment_method_id: str = Field(sa_column=Column(String(50)), nullable=True, default= None)
 
     created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)))
     updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)))

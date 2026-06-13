@@ -1,12 +1,24 @@
-from sqlmodel import SQLModel
 from datetime import datetime
+from typing import Optional
+from sqlmodel import SQLModel, Field
 
-class PagoCreate(SQLModel):
-    pedido_id: int
-    transaction_amount: float
 
-class PagoRead(SQLModel):
-    id: int
-    pedido_id: int
-    transaction_amount: float
-    created_at: datetime
+class CrearPagoRequest(SQLModel):
+    pedido_id: int = Field(..., description="ID del pedido a pagar")
+
+
+class ConfirmarPagoRequest(SQLModel):
+    pedido_id:  int = Field(..., description="ID del pedido")
+    mp_payment_id: Optional[int] = Field(default=None, description="ID del pago en MP")
+
+
+class PagoCrearResponse(SQLModel):
+    pago_id:       int
+    preference_id: str
+    init_point:    Optional[str] = None
+    public_key:    Optional[str] = None
+
+
+class PagoEstadoResponse(SQLModel):
+    estado:     Optional[str] = None
+    pedido_id:  int

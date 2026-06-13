@@ -76,7 +76,7 @@ def seed_usuarios(session: Session) -> None:
         {"nombre": "Admin", "apellido": "Principal", "celular" : "1234567890", "email" : "admin@foodstore.com", "password_hash" : hashear_password("admin123")}
     ]
     for data in usuarios:
-        existing = existing = session.exec(
+        existing = session.exec(
             select(Usuario).where(Usuario.email == data["email"])
         ).first()
         if not existing:
