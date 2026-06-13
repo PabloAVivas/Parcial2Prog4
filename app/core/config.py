@@ -41,6 +41,20 @@ class Settings(BaseSettings):
     VITE_FRONTEND_URL:  str = "http://localhost:5173"
     VITE_API_URL:       str = "http://localhost:8000"
     
+    # --- MercadoPago ---
+    MP_ACCESS_TOKEN:  Optional[str] = None
+    MP_PUBLIC_KEY:    Optional[str] = None
+    MP_WEBHOOK_URL:   Optional[str] = None
+    NGROK_URL:        Optional[str] = None
+
+    # --- CORS y Frontend ---
+    #   Si lees esto hay que revisarlo bien porque capaz esta muy al pedo
+    # pero puede servir, mañana lo sigo viendo pero por ahora para que funcione
+    # todo bien (si hay problemas fijarse de cambiar el puerto).
+    CORS_ORIGINS:       str = "http://localhost:5173"
+    VITE_FRONTEND_URL:  str = "http://localhost:5173"
+    VITE_API_URL:       str = "http://localhost:8000"
+    
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",
