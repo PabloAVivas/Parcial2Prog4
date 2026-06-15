@@ -108,7 +108,7 @@ class PedidoService:
                     )
                 if direccion.usuario_id != usuario_actual_id:
                     raise HTTPException(
-                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        status_code=status.HTTP_403_FORBIDDEN,
                         detail="No tienes los permisos para realizar esta accion"
                     )
 
@@ -153,14 +153,15 @@ class PedidoService:
                 
                 if producto.ingredientes is not None:
                     for ingrediente_producto in producto.ingrediente_links:
-                        ingrediente = self._get_ingrediente_or_404(uow, ingrediente_producto.ingrediente_id)
-                        cantidad_restar = ingrediente_producto.cantidad * depe_input.cantidad
-                        if cantidad_restar > ingrediente.stock_cantidad:
-                            raise HTTPException(
-                            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                            detail=f"No hay stock suficiente en Ingrediente {ingrediente.nombre}",
-                        )
-                        ingrediente.stock_cantidad -= cantidad_restar
+                        if ingrediente_producto.ingrediente_id not in depe_input.personalizacion:
+                            ingrediente = self._get_ingrediente_or_404(uow, ingrediente_producto.ingrediente_id)
+                            cantidad_restar = ingrediente_producto.cantidad * depe_input.cantidad
+                            if cantidad_restar > ingrediente.stock_cantidad:
+                                raise HTTPException(
+                                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                                detail=f"No hay stock suficiente en Ingrediente {ingrediente.nombre}",
+                            )
+                            ingrediente.stock_cantidad -= cantidad_restar
 
                 producto.stock_cantidad -= depe_input.cantidad
                 subtotal = self.subtotal_producto(producto.precio_base, depe_input.cantidad)
@@ -252,9 +253,10 @@ class PedidoService:
                     producto.stock_cantidad += depe.cantidad
                     if producto.ingredientes is not None:
                         for ingrediente_producto in producto.ingrediente_links:
-                            ingrediente = self._get_ingrediente_or_404(uow, ingrediente_producto.id)
-                            cantidad_sumar = ingrediente_producto.cantidad * depe.cantidad
-                            ingrediente.stock_cantidad += cantidad_sumar
+                            if ingrediente_producto.ingrediente_id not in depe.personalizacion:
+                                ingrediente = self._get_ingrediente_or_404(uow, ingrediente_producto.ingrediente_id)
+                                cantidad_sumar = ingrediente_producto.cantidad * depe.cantidad
+                                ingrediente.stock_cantidad += cantidad_sumar
 
             elif data.estado_bool and "ADMIN" in roles:
                 match pedido.estado_codigo:

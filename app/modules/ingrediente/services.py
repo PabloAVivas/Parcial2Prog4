@@ -20,6 +20,13 @@ class IngredienteService:
 
     def crear(self, data: IngredienteCreate) -> IngredienteRead:
         with IngredienteUnitOfWork(self._session) as uow:
+            unidad = uow.producto.get_unidad(data.unidad_medida_id)
+            if not unidad:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Unidad de medida con id={data.unidad_medida_id} no encontrado",
+                )
+
             ingre = uow.ingrediente.get_by_nombre(data.nombre)
             if ingre is not None:
                 raise HTTPException(
