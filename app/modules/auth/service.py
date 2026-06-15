@@ -62,8 +62,3 @@ class AuthService:
             nuevo_access_token = create_access_token(data={"sub" : str(usuario.id), "role" : roles_codigos})
             return nuevo_access_token
 
-    def revocar_refresh_token(self, usuario_id: int) -> None:
-        with UsuarioUnitOfWork(self._session) as uow:
-            tokens = uow.refresh_token.get_active_by_usuario(usuario_id)
-            for token in tokens:
-                token.revoked_at = datetime.now(timezone.utc)

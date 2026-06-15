@@ -92,5 +92,4 @@ def read_me(
         secure=False
     )
 
-    service.revocar_refresh_token(usuario_actual.id)
-    return None
+    return {'mensaje' : 'Session cerrada correctamente'}

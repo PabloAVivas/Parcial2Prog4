@@ -2,7 +2,7 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlmodel import Session
 from app.modules.producto.models import Producto
-from app.modules.estadisticas.schemas import ResumenResponse, VentasPeriodoItem, PedidosEstadoItem, IngresosResponse, Periodo, ProductoTopItem, Limite
+from app.modules.estadisticas.schemas import ResumenResponse, VentasPeriodoItem, PedidosEstadoItem, IngresosResponse, Periodo, ProductoTopItem
 from datetime import datetime, timezone, date, timedelta
 from app.modules.producto.unit_of_work import ProductoUnitOfWork
 from app.modules.pedido.unit_of_work import PedidoUnitOfWork
@@ -75,15 +75,15 @@ class EstadisticaService:
             )
         return result
     
-    def get_productos_top_sv(self, limit: Limite) -> list[ProductoTopItem]:
-        if limit.limit <= 0 or limit.limit is None:
+    def get_productos_top_sv(self, limit: int) -> list[ProductoTopItem]:
+        if limit <= 0 or limit is None:
             raise HTTPException(
                 status_code=status.HTTP_406_NOT_ACCEPTABLE,
                 detail="Limite negativo o inexistente"
             )
         with PedidoUnitOfWork(self._session) as uow:
 
-            productos = uow.detalle_pedido.get_productos_top(limit.limit)
+            productos = uow.detalle_pedido.get_productos_top(limit)
 
             result = [ProductoTopItem(**p) for p in productos]
         return result

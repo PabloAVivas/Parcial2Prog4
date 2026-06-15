@@ -123,7 +123,7 @@ class PedidoRepository(BaseRepository[Pedido]):
                 Pedido.estado_codigo.notin_(["ENTREGADO", "CANCELADO"])
             )
         )
-        return self.session.exec(query).scalar()
+        return self.session.exec(query).first()
 
 class DetallePedidoRepository:
     def __init__(self, session: Session) -> None:
