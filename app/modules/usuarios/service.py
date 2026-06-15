@@ -23,11 +23,12 @@ class UsuarioService:
         with UsuarioUnitOfWork(self._session) as uow:
             usuario = uow.usuario.get_by_id(usuario_id)
             usuario_actual = uow.usuario.get_by_id(usuario_actual_id)
+            roles = [rol.codigo for rol in usuario_actual.roles]
             if not usuario:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
             
-            if usuario.id != usuario_actual.id:
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No tienes permisos para realizar esta accion")
+            if usuario.id != usuario_actual.id and "ADMIN" not in roles:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permisos para realizar esta accion")
 
             usuario_actualizado = usuario_data.model_dump(exclude_unset=True)
 
@@ -45,7 +46,7 @@ class UsuarioService:
 
     def obtener_usuarios_admin(self, offset: int = 0, limit: int = 100, rol_codigo: Optional[str] = None) -> UsuarioPaginadoResponse:
         with UsuarioUnitOfWork(self._session) as uow:
-            usuarios = uow.usuario.get_activo_paginado(offset=offset, limit=limit, rol_codigo=rol_codigo)
+            usuarios = uow.usuario.get_all(offset=offset, limit=limit, rol_codigo=rol_codigo)
             total = uow.usuario.count_activo(rol_codigo=rol_codigo)
             return UsuarioPaginadoResponse(
                 total=total,
@@ -59,7 +60,7 @@ class UsuarioService:
             usuario = self._get_or_404(uow, usuario_id)
            
             if usuario.id != usuario_actual.id and "ADMIN" not in roles:
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usted no tiene los permisos para realizar esta accion")
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usted no tiene los permisos para realizar esta accion")
 
             return UsuarioRead.model_validate(usuario)
     
@@ -68,7 +69,7 @@ class UsuarioService:
             usuario = self._get_or_404(uow, usuario_id)
             if usuario.id != usuario_id: 
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    status_code=status.HTTP_403_FORBIDDEN,
                     detail="No tienes permisos para acceder a este recurso"
                 )
             
@@ -92,7 +93,7 @@ class UsuarioService:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
             
             if usuario_actual.id != usuario.id:
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No tienes permisos para acceder a este recurso")
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permisos para acceder a este recurso")
 
             direcciones = uow.direccion_entrega.get_direcciones_by_usuario_id(usuario_id)
             lista_direcciones = [DireccionEntregaRead.model_validate(direccion) for direccion in direcciones]
@@ -130,7 +131,7 @@ class UsuarioService:
 
             if direccion.usuario_id != usuario_id:
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    status_code=status.HTTP_403_FORBIDDEN,
                     detail="No tienes los permisos para acceder a esta funcionalidad"
                 )
 

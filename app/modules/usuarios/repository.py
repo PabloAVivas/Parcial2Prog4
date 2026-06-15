@@ -8,6 +8,16 @@ class UsuarioRepository(BaseRepository[Usuario]):
     def __init__(self, session: Session) -> None:
         super().__init__(session, Usuario)
 
+    def get_all(self, offset: int = 0, limit: int = 100, rol_codigo: Optional[str] = None) -> list[Usuario]:
+        statement = select(Usuario).options(
+            selectinload(Usuario.roles),
+            selectinload(Usuario.direcciones)
+        ).order_by(Usuario.id)
+        if rol_codigo:
+            statement = statement.where(Usuario.roles.any(Rol.codigo == rol_codigo.upper()))
+
+        return list(self.session.exec(statement.offset(offset).limit(limit)).all())
+
     def get_activo(self, offset: int = 0, limit: int = 100) -> list[Usuario]:
         statement = select(Usuario).where(Usuario.activo == True)
         

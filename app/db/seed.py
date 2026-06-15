@@ -73,7 +73,9 @@ def seed_roles(session: Session) -> None:
 
 def seed_usuarios(session: Session) -> None:
     usuarios = [
-        {"nombre": "Admin", "apellido": "Principal", "celular" : "1234567890", "email" : "admin@foodstore.com", "password_hash" : hashear_password("admin123")}
+        {"nombre": "Admin", "apellido": "Principal", "celular" : "1234567890", "email" : "admin@foodstore.com", "password_hash" : hashear_password("admin123")},
+        {"nombre": "Stock", "apellido": "Manager", "celular" : "1234567891", "email" : "stock@foodstore.com", "password_hash" : hashear_password("stock123")},
+        {"nombre": "Pedido", "apellido": "Manager", "celular" : "1234567892", "email" : "pedido@foodstore.com", "password_hash" : hashear_password("pedido123")},
     ]
     for data in usuarios:
         existing = session.exec(
