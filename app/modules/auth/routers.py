@@ -1,4 +1,5 @@
 from typing import Annotated
+from urllib import response
 from fastapi import APIRouter, Depends, status, Response, Request, HTTPException
 from sqlmodel import Session
 from app.core.rate_limit import limiter
@@ -64,7 +65,15 @@ def refrescar_token(request: Request, service: SeDe) -> TokenRead:
         )
     
     nuevo_access = service.refrescar_access_token(refresh_cookie)
-
+    
+    response.set_cookie(
+        key="access_token",
+        value=token.access_token,
+        httponly=True,
+        max_age=1800,
+        samesite="lax",
+        secure=False
+    )
     return TokenRead(
         access_token= nuevo_access,
         token_type= "bearer",
