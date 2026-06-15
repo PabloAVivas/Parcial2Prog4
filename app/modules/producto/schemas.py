@@ -14,7 +14,6 @@ class CategoriaBasicCreate(SQLModel):
 class IngredienteBasicCreate(SQLModel):
     id: int
     cantidad: float
-    unidad_medida_id: int
     es_removible: bool
 
 class CategoriaBasicRead(SQLModel):
@@ -33,7 +32,7 @@ class IngredienteBasicRead(SQLModel):
 
 class ProductoCreate(SQLModel):
     nombre: str
-    unidad_medida_id: Optional[int] = None
+    unidad_medida_id: int
     descripcion: str
     precio_base: float
     imagenes_url: list[str] = []

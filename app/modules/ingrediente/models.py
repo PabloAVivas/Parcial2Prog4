@@ -1,11 +1,11 @@
 from typing import Optional, TYPE_CHECKING, List
-from sqlalchemy import Column
+from sqlalchemy import Column, ForeignKey, Integer
 from sqlmodel import Field, Relationship, SQLModel, DateTime
 from app.modules.producto.models import ProductoIngredienteLink
 from datetime import datetime, timezone
 
 if TYPE_CHECKING:
-    from app.modules.producto.models import Producto
+    from app.modules.producto.models import Producto, UnidadMedida
 
 
 class Ingrediente(SQLModel, table=True):
@@ -14,7 +14,16 @@ class Ingrediente(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
     nombre: str = Field(index=True, unique=True, max_length=100)
-    stock_cantidad: int = Field(ge=0, nullable=False, default=0)
+    stock_cantidad: float = Field(ge=0, nullable=False, default=0, max_digits=10, decimal_places=2)
+    unidad_medida_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("unidad_medida.id"),
+            foreign_key=True,
+            nullable=True,
+            default= None
+        )
+    )
     descripcion: str = Field(nullable=True, default=None)
     es_alergeno: bool = Field(default=False)
     activo: bool = Field(nullable= False, default=True)
@@ -25,3 +34,4 @@ class Ingrediente(SQLModel, table=True):
         back_populates="ingredientes",
         link_model=ProductoIngredienteLink,
     )
+    unidad_medida: "UnidadMedida" = Relationship()

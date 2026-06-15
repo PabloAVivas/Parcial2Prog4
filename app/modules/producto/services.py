@@ -102,7 +102,7 @@ class ProductoService:
                         status_code=404,
                         detail=f"Ingrediente {ing_input.id} no encontrado",
                     )
-                uow.producto.add_ingrediente(producto.id, ing_input.id, ing_input.cantidad, ing_input.unidad_medida_id, ing_input.es_removible)
+                uow.producto.add_ingrediente(producto.id, ing_input.id, ing_input.cantidad, ing.unidad_medida_id, ing_input.es_removible)
 
             uow.flush()
             producto_creado = uow.producto.get_by_id_categorias_ingredientes(producto.id)
@@ -168,7 +168,7 @@ class ProductoService:
                                 status_code=404,
                                 detail=f"Ingrediente {ing_input.id} no encontrado",
                             )
-                        uow.producto.add_ingrediente(producto.id, ing_input.id, ing_input.cantidad, ing_input.unidad_medida_id, ing_input.es_removible)
+                        uow.producto.add_ingrediente(producto.id, ing_input.id, ing_input.cantidad, ing.unidad_medida_id, ing_input.es_removible)
 
                 uow.flush()
                 producto_actualizado = uow.producto.get_by_id_categorias_ingredientes(producto.id)

@@ -2,7 +2,6 @@ from sqlmodel import Session, select, func
 from app.core.repository import BaseRepository
 from app.modules.ingrediente.models import Ingrediente
 from sqlalchemy.orm import selectinload
-from app.modules.producto.models import  ProductoIngredienteLink
 
 
 
@@ -14,7 +13,8 @@ class IngredienteRepository(BaseRepository[Ingrediente]):
         query = select(Ingrediente).where(Ingrediente.activo == True)
 
         query = query.options(
-            selectinload(Ingrediente.producto_links)
+            selectinload(Ingrediente.producto_links),
+            selectinload(Ingrediente.unidad_medida)
         )
 
         if nombre:
@@ -26,7 +26,8 @@ class IngredienteRepository(BaseRepository[Ingrediente]):
     
     def get_by_id_productos(self, ingrediente_id: int) -> Ingrediente:
         query = select(Ingrediente).where(Ingrediente.id == ingrediente_id).options(
-            selectinload(Ingrediente.producto_links)
+            selectinload(Ingrediente.producto_links),
+            selectinload(Ingrediente.unidad_medida)
         )
         return self.session.exec(query).first()
 
