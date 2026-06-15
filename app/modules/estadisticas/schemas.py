@@ -2,9 +2,6 @@ from typing import Optional, List
 from sqlmodel import SQLModel
 from datetime import date
 
-class Limite(SQLModel):
-    limit:int
-
 class Periodo(SQLModel):
     desde: date
     hasta: date

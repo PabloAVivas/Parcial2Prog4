@@ -30,9 +30,8 @@ def seed_estados_pedido(session: Session) -> None:
         {"codigo": "PENDIENTE", "descripcion": "Pedido creado, pago pendiente", "orden": 1, "es_terminal": False},
         {"codigo": "CONFIRMADO", "descripcion": "Pago procesado y confirmado", "orden": 2, "es_terminal": False},
         {"codigo": "EN_PREPARACION", "descripcion": "En preparacion, en cocina", "orden": 3, "es_terminal": False},
-        {"codigo": "EN_CAMINO", "descripcion": "Despachado al cliente", "orden": 4, "es_terminal": False},
-        {"codigo": "ENTREGADO", "descripcion": "Entrega confirmada", "orden": 5, "es_terminal": True},
-        {"codigo": "CANCELADO", "descripcion": "Pedido cancelado", "orden": 6, "es_terminal": True},
+        {"codigo": "ENTREGADO", "descripcion": "Entrega confirmada", "orden": 4, "es_terminal": True},
+        {"codigo": "CANCELADO", "descripcion": "Pedido cancelado", "orden": 5, "es_terminal": True},
     ]
     for data in estados:
         existing = session.get(EstadoPedido, data["codigo"])

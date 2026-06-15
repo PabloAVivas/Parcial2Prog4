@@ -7,6 +7,7 @@ from app.db.seed import seed_all
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.core.rate_limit import limiter
+from app.core.config import settings
 from app.modules.producto.routers import router as producto_router
 from app.modules.categoria.routers import router as categoria_router
 from app.modules.estadisticas.routers import router as estadistica_router
@@ -18,6 +19,7 @@ from app.modules.auth.routers import router as auth_router
 from app.modules.direcciones.routers import router as direcciones_router
 from app.modules.admin.routers import router as admin_router
 from app.modules.images.routers import router as imagen_router
+from app.modules.estadisticas.routers import router as estadisticas_router
 
 app = FastAPI()
 
@@ -43,10 +45,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
 CORSMiddleware,
-allow_origins=['http://localhost:5173'],
-allow_credentials=True,
-allow_methods=['*'],
-allow_headers=['*'],
+    allow_origins=[settings.VITE_FRONTEND_URL],
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*'],
 )
 
 app.include_router(producto_router, prefix="/api/v1/productos", tags=["producto"])
@@ -59,4 +61,5 @@ app.include_router(usuario_router, prefix="/api/v1/usuarios", tags=["Usuarios"])
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(direcciones_router, prefix="/api/v1/direcciones", tags=["direcciones"])
 app.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
-app.include_router(imagen_router, prefix="/api/v1/imagenes", tags=["imagenes"])
+app.include_router(imagen_router, prefix="/api/v1/uploads", tags=["imagenes"])
+app.include_router(estadisticas_router, prefix="/api/v1/estadisticas", tags=["estadisticas"])
