@@ -9,7 +9,7 @@ from app.modules.pago.services import PagoService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/pagos", tags=["pagos"])
+router = APIRouter()
 
 
 def get_payment_service(session: Session = Depends(get_session)) -> PagoService:
