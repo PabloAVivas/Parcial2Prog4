@@ -2,7 +2,7 @@ from sqlmodel import Session, select, func, delete
 from app.core.repository import BaseRepository
 from sqlalchemy.orm import selectinload
 from app.modules.pedido.models import Pedido, HistorialEstadoPedido, DetallePedido, FormaPago, EstadoPedido
-
+from datetime import date
 
 class PedidoRepository(BaseRepository[Pedido]):
     def __init__(self, session: Session) -> None:
@@ -49,6 +49,25 @@ class PedidoRepository(BaseRepository[Pedido]):
         )
         query = query.order_by(Pedido.id)
         return self.session.exec(query).all()
+    
+    def get_ventas_periodo(self, desde:date, hasta: date, agrupacion: str) -> list[dict]:
+        fecha_grupo = func.date_trunc(agrupacion, Pedido.created_at).label("fecha_grupo")
+        query = (
+            select(
+                fecha_grupo,
+                func.count(Pedido.id).label("cantidad_pedidos"),
+                func.sum(Pedido.total).label("ventas_totales")
+            )
+            .where(
+                Pedido.created_at >= desde,
+                Pedido.created_at <= hasta,
+                Pedido.estado_codigo == "ENTREGADO" 
+            )
+            .group_by(fecha_grupo)
+            .order_by(fecha_grupo.asc())
+        )
+        resultados = self.session.exec(query).all()
+        return [row._asdict() for row in resultados]
 
 class DetallePedidoRepository:
     def __init__(self, session: Session) -> None:

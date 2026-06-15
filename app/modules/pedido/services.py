@@ -152,9 +152,9 @@ class PedidoService:
                     )
                 
                 if producto.ingredientes is not None:
-                    for ingrediente_producto in producto.ingredientes:
-                        ingrediente = self._get_ingrediente_or_404(uow, ingrediente_producto.id)
-                        cantidad_restar = producto.ingrediente_links.cantidad * depe_input.cantidad
+                    for ingrediente_producto in producto.ingrediente_links:
+                        ingrediente = self._get_ingrediente_or_404(uow, ingrediente_producto.ingrediente_id)
+                        cantidad_restar = ingrediente_producto.cantidad * depe_input.cantidad
                         if cantidad_restar > ingrediente.stock_cantidad:
                             raise HTTPException(
                             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -251,9 +251,9 @@ class PedidoService:
                     producto = self._get_producto_or_404(uow, depe.producto_id)
                     producto.stock_cantidad += depe.cantidad
                     if producto.ingredientes is not None:
-                        for ingrediente_producto in producto.ingredientes:
+                        for ingrediente_producto in producto.ingrediente_links:
                             ingrediente = self._get_ingrediente_or_404(uow, ingrediente_producto.id)
-                            cantidad_sumar = producto.ingrediente_links.cantidad * depe.cantidad
+                            cantidad_sumar = ingrediente_producto.cantidad * depe.cantidad
                             ingrediente.stock_cantidad += cantidad_sumar
 
             elif data.estado_bool and "ADMIN" in roles:
