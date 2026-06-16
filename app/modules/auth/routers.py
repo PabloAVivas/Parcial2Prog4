@@ -55,7 +55,7 @@ def iniciar_sesion(
     
 @router.patch("/refresh", response_model=TokenRead, status_code=status.HTTP_200_OK, summary="Refresh de access token")
 @limiter.limit("5/15minutes")
-def refrescar_token(request: Request, service: SeDe) -> TokenRead:
+def refrescar_token(request: Request, service: SeDe, response: Response) -> TokenRead:
     refresh_cookie = request.cookies.get("refresh_token")
 
     if not refresh_cookie:
@@ -68,7 +68,7 @@ def refrescar_token(request: Request, service: SeDe) -> TokenRead:
     
     response.set_cookie(
         key="access_token",
-        value=token.access_token,
+        value=nuevo_access,
         httponly=True,
         max_age=1800,
         samesite="lax",

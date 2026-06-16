@@ -1,6 +1,7 @@
 import logging
 from typing import Any
 from fastapi import WebSocket
+from fastapi.encoders import jsonable_encoder
 
 logger = logging.getLogger("app.core.websocket")
 
@@ -71,7 +72,7 @@ class ConnectionManager:
             for connection in list(self.rooms[room]):
                 if connection not in sent_to:
                     try:
-                        await connection.send_json(payload)
+                        await connection.send_json(jsonable_encoder(payload))
                         sent_to.add(connection)
                     except Exception as e:
                         logger.warning(f"Error al enviar WebSocket. Removiendo conexión: {e}")
@@ -85,7 +86,7 @@ class ConnectionManager:
             for connection in list(room_connections):
                 if connection not in sent_to:
                     try:
-                        await connection.send_json(payload)
+                        await connection.send_json(jsonable_encoder(payload))
                         sent_to.add(connection)
                     except Exception as e:
                         logger.warning(f"Error al enviar WebSocket. Removiendo conexión: {e}")
@@ -117,7 +118,7 @@ class ConnectionManager:
 
         for connection in list(self.rooms[room]):
             try:
-                await connection.send_json(payload)
+                await connection.send_json(jsonable_encoder(payload))
             except Exception as e:
                 logger.warning(f"Error al enviar WebSocket. Removiendo conexión: {e}")
                 self.disconnect(connection)
