@@ -115,6 +115,55 @@ class TestLogout:
         assert data["mensaje"] == "Session cerrada correctamente"
 
 
+class TestRateLimit:
+    """Test rate limiting on auth endpoints (5 attempts per 15 minutes)."""
+
+    def test_login_rate_limit_exceeded(self, client: TestClient):
+        """After 5 failed logins, the 6th should return 429."""
+        for _ in range(5):
+            resp = client.post(
+                "/api/v1/auth/login",
+                json={"email": "admin@foodstore.com", "password": "wrongpass"},
+            )
+            assert resp.status_code == 401
+
+        # 6th attempt should be rate limited (HTTP 429)
+        resp = client.post(
+            "/api/v1/auth/login",
+            json={"email": "admin@foodstore.com", "password": "wrongpass"},
+        )
+        assert resp.status_code == 429
+
+    def test_register_rate_limit_exceeded(self, client: TestClient):
+        """After 5 register attempts, the 6th should return 429."""
+        for i in range(5):
+            resp = client.post(
+                "/api/v1/auth/register",
+                json={
+                    "nombre": "Test",
+                    "apellido": f"User{i}",
+                    "celular": f"111111111{i}",
+                    "email": f"test{i}@rate.com",
+                    "password": "testpass123",
+                },
+            )
+            # May succeed or fail, but shouldn't 429
+            assert resp.status_code != 429
+
+        # 6th attempt should be rate limited
+        resp = client.post(
+            "/api/v1/auth/register",
+            json={
+                "nombre": "Test",
+                "apellido": "RateLimited",
+                "celular": "1111111119",
+                "email": "ratelimited@test.com",
+                "password": "testpass123",
+            },
+        )
+        assert resp.status_code == 429
+
+
 class TestMe:
     def test_me_authenticated(self, client: TestClient):
         login_resp = client.post(
