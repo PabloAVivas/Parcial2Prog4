@@ -7,7 +7,7 @@ from app.modules.pago.models import Pago
 class PagoRepository(BaseRepository[Pago]):
 
     def __init__(self, session: Session):
-        super().__init__(Pago, session)
+        super().__init__(session, Pago)
 
     def get_by_pedido(self, pedido_id: int) -> List[Pago]:
         return list(

@@ -15,14 +15,14 @@ class ProductoBasicRead(SQLModel):
 
 class IngredienteCreate(SQLModel):
     nombre: str
-    stock_cantidad: Optional[int] = 0
+    stock_cantidad: Optional[float] = 0
     unidad_medida_id: int
     descripcion: Optional[str] = None
     es_alergeno: Optional[bool] = False
 
 class IngredienteUpdate(SQLModel):
     nombre: Optional[str] = None
-    stock_cantidad: Optional[int] = None
+    stock_cantidad: Optional[float] = None
     unidad_medida_id: Optional[int] = None
     descripcion: Optional[str] = None
     es_alergeno: Optional[bool] = None
@@ -30,7 +30,7 @@ class IngredienteUpdate(SQLModel):
 class IngredienteRead(SQLModel):
     id: int
     nombre: str
-    stock_cantidad: int
+    stock_cantidad: float
     unidad_medida: UnidadMedidaRead
     descripcion: str
     es_alergeno: bool
