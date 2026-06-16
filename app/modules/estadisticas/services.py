@@ -12,11 +12,16 @@ class EstadisticaService:
         self._session = session
 
     def get_ventas_periodo_sv(self, data: Periodo) -> list[VentasPeriodoItem]:
-        agrupacion = data.agrupacion.lower()
-        if data.desde > data.hasta or agrupacion not in ("dia", "día", "day", "semana", "week", "mes", "month"):
+        if data.desde > data.hasta:
             raise HTTPException(
                 status_code=status.HTTP_406_NOT_ACCEPTABLE,
                 detail="Fechas o agrupacion incorrectas"
+            )
+        agrupacion = (data.agrupacion or "day").lower()
+        if agrupacion not in ("dia", "día", "day", "semana", "week", "mes", "month"):
+            raise HTTPException(
+                status_code=status.HTTP_406_NOT_ACCEPTABLE,
+                detail="Agrupacion invalida"
             )
         hasta = data.hasta + timedelta(days=1)
         if agrupacion in ("dia", "día"):
@@ -76,7 +81,7 @@ class EstadisticaService:
         return result
     
     def get_productos_top_sv(self, limit: int) -> list[ProductoTopItem]:
-        if limit <= 0 or limit is None:
+        if limit is None or limit <= 0:
             raise HTTPException(
                 status_code=status.HTTP_406_NOT_ACCEPTABLE,
                 detail="Limite negativo o inexistente"

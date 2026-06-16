@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
     yield
     
 app = FastAPI(
-    title="Examen Intrrgrador",
+    title="Examen Integrador",
     description="Food Store Completo y funcional",
     version="5.0.0",
     lifespan=lifespan,
@@ -53,7 +53,6 @@ CORSMiddleware,
 
 app.include_router(producto_router, prefix="/api/v1/productos", tags=["producto"])
 app.include_router(categoria_router, prefix="/api/v1/categorias", tags=["categoria"])
-app.include_router(estadistica_router, prefix="/api/v1/estadisticas", tags=["estadistica"])
 app.include_router(ingrediente_router, prefix="/api/v1/ingredientes", tags=["ingrediente"])
 app.include_router(pedido_router, prefix="/api/v1/pedidos", tags=["pedido"])
 app.include_router(pago_router, prefix="/api/v1/pagos", tags=["pago"])

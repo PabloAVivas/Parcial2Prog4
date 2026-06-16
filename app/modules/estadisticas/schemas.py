@@ -9,7 +9,7 @@ class Periodo(SQLModel):
 
 class ResumenResponse(SQLModel):
     ventas_hoy: float
-    ticket_promedio: int
+    ticket_promedio: float
     pedidos_activos: int
     mes_actual: int
 
