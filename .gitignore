@@ -3,3 +3,9 @@
 __pycache__
 **/__pycache__/
 instrucciones.md
+.coverage
+htmlcov/
+.pytest
+.pytest_cache/
+.pytest_cache/**/.pytest_cache/
+.pytest_cache/**/.pytest_cache/*
