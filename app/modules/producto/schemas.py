@@ -24,7 +24,7 @@ class CategoriaBasicRead(SQLModel):
 class IngredienteBasicRead(SQLModel):
     id: int
     nombre: str
-    stock_cantidad: int
+    stock_cantidad: float
     es_alergeno: bool
     cantidad: float
     unidad_medida: UnidadMedidaRead
